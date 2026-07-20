@@ -1,0 +1,1 @@
+# Motor de socket que envia comandos críticos ao servidor

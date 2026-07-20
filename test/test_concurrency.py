@@ -1,0 +1,1 @@
+# Testes de estresse simulando múltiplas compras simultâneas

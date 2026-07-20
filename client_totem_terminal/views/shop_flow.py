@@ -1,0 +1,1 @@
+# Etapa 4.1: Telas de seleção de produtos, indicação de armário e checkout

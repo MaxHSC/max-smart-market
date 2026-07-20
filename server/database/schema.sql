@@ -1,0 +1,1 @@
+# Script puramente DDL (Criação de tabelas, índices e triggers)

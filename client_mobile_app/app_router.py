@@ -1,0 +1,1 @@
+# Orquestrador de Telas (Gerencia o histórico e fluxo de navegação)

@@ -1,0 +1,1 @@
+# Simula o pulso elétrico para abrir o trinco (com timeout de fechamento)

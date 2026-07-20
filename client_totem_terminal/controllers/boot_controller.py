@@ -1,0 +1,1 @@
+# Controla o carregamento e desvio para modo Manutenção

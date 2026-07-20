@@ -1,0 +1,1 @@
+# Controla a lógica do carrinho, verificação de reserva e geração de token

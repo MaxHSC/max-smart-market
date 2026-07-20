@@ -1,0 +1,1 @@
+# Simula o sensor magnético que avisa se a porta está aberta ou fechada

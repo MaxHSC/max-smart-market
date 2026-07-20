@@ -1,0 +1,1 @@
+# IP/Porta do Servidor e ID Único do Armário (ex: CABINET_01)

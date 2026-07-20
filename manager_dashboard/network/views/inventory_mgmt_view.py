@@ -1,0 +1,1 @@
+# Telas para alterar preço, suspender produto (status=SUSPENDED) ou deletar

@@ -1,0 +1,1 @@
+ # Constantes com os nomes dos comandos (ex: CMD_RESERVA = "RES")

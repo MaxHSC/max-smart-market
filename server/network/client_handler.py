@@ -1,0 +1,1 @@
+# Trata o fluxo de dados de um cliente específico após o 'select'

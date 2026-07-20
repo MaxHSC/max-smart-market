@@ -1,0 +1,1 @@
+# Simula a leitura analógica dos sensores de peso das prateleiras

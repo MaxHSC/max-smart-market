@@ -1,0 +1,1 @@
+# Gerenciador de conexão e transações ACID (Commit/Rollback)

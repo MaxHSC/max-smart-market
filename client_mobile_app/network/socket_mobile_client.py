@@ -1,0 +1,1 @@
+# Camada de Rede (Conversa estritamente com o Server via Sockets)

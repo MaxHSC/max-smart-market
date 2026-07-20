@@ -1,0 +1,1 @@
+# Testes de isolamento de transações (Commit/Rollback)

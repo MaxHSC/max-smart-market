@@ -1,0 +1,1 @@
+# Variáveis de ambiente e caminhos de arquivos

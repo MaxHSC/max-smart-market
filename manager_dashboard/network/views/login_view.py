@@ -1,0 +1,1 @@
+# Autenticação restrita do administrador

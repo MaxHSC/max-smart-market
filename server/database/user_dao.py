@@ -1,0 +1,1 @@
+# Métodos SQL específicos de Usuários e Penalizações

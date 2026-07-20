@@ -85,6 +85,5 @@ graph TD
 *   **Transações Seguras (ACID):** Uso de travas nativas do banco de dados (`commit` e `rollback`) para garantir que operações financeiras e de estoque aconteçam sob o princípio do "tudo ou nada", evitando dados corrompidos.
 *   **Gerenciamento de Concorrência Física:** Implementação de regras de negócio no backend para traduzir eventos de hardware virtuais (sensores de peso e trincos magnéticos) em manipulação de dados em memória e disco.
 *   **Thread Sentinela (Garbage Collector de Reservas):** Linha de execução dedicada no servidor que atua como zeladora, varrendo o banco de dados periodicamente para liberar produtos cujas reservas estouraram o tempo limite.
-*   **Manipulação Binária de Arquivos:** Abstração de imagens e códigos de barra lidos como matrizes de bytes brutas, forçando o algoritmo a decodificar padrões binários ($0$ e $1$) na raça para identificação de produtos.
 
 ---

@@ -1,0 +1,1 @@
+# Controla o fluxo entre visualização de dados e gerência

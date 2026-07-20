@@ -1,0 +1,1 @@
+# Controla chamadas de alteração de preço, remoção e suspensão

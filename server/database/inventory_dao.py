@@ -1,0 +1,1 @@
+# Métodos SQL específicos de Estoque (3 camadas)

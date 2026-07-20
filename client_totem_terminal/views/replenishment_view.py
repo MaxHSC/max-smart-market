@@ -1,0 +1,1 @@
+#Menu do estoquista (Selecionar gaveta, ler código de barras, confirmar quantidade)

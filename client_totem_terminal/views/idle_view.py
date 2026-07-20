@@ -1,0 +1,1 @@
+# Etapa 2: Tela de espera/descanso ("Toque para começar")

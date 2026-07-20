@@ -1,0 +1,1 @@
+# Gerenciador de I/O (ex: usando select/selectors para gerenciar múltiplos sockets)

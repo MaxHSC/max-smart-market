@@ -1,0 +1,1 @@
+# Definições de rede administrativas (IP/Porta Admin ou Token)

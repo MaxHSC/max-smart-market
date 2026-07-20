@@ -1,0 +1,1 @@
+ # Etapa 1: Carregamento de dados do aplicativo

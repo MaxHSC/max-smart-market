@@ -1,0 +1,1 @@
+# Transmite as variações de peso bruto em bytes para o Servidor

@@ -1,0 +1,1 @@
+# Etapa 3: Tela de CPF/Código e aviso de captura de foto (segurança)

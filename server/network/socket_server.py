@@ -1,0 +1,1 @@
+# Abre a porta TCP e escuta conexões brutas

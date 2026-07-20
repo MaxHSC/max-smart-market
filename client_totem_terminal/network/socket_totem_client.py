@@ -1,0 +1,1 @@
+# Comunicação via Socket com servidor

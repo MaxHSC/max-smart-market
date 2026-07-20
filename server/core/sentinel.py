@@ -1,0 +1,1 @@
+ # Thread em segundo plano dedicada APENAS a limpar reservas expiradas

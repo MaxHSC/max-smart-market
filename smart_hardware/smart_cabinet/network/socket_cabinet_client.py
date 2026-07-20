@@ -1,0 +1,1 @@
+# Mantém conexão via socket para receber ordens e enviar status da porta

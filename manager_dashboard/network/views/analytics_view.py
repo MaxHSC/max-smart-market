@@ -1,0 +1,1 @@
+# Exibição de relatórios (faturamento, produtos mais vendidos, alertas de furto)

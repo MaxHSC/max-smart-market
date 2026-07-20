@@ -1,0 +1,1 @@
+ # Interface CLI/GUI que envia comandos de reserva remota

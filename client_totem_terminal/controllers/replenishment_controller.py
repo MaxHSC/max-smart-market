@@ -1,0 +1,1 @@
+#Controla a abertura de trincos para abastecimento e contagem

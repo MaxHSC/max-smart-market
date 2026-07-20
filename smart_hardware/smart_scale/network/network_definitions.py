@@ -1,0 +1,1 @@
+# IP/Porta do Servidor e ID Único da Balança (ex: SCALE_A3)

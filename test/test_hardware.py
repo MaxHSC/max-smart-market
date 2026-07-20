@@ -1,0 +1,1 @@
+# Testes de variação de peso e decodificação binária

@@ -1,0 +1,1 @@
+# Solicita e processa dados de vendas, faturamento e perdas
