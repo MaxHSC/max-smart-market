@@ -1,1 +1,0 @@
-# Thread Sentinela (Zeladora/Garbage Collector de reservas)
