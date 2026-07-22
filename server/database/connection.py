@@ -4,7 +4,7 @@ import sqlite3
 
 DATABASE_NAME = "server/database/smart_market.db"
 
-def conect_database() -> sqlite3.Connection:
+def connect_database() -> sqlite3.Connection:
     '''
     CRIA E RETORNA UMA CONEXÃO CONFIGURADA COM O SQLITE.
 
@@ -20,7 +20,7 @@ def start_database() -> None:
     '''
     LÊ O ARQUIVO SCHEMA.SQL E CRIA TODA A ESTRUTURA DAS TABELAS DO BANCO DE DADOS
     '''
-    connection = conect_database()
+    connection = connect_database()
 
     try:
         cursor = connection.cursor()

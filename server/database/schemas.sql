@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL,
     document TEXT UNIQUE NOT NULL,
+    phone_number INTEGER NOT NULL CHECK (phone_number > 0),
+    pass_key TEXT NOT NULL,
     type_user TEXT NOT NULL CHECK (type_user IN('CLIENTE','GERENTE','COLABORADOR')),
     created_time DATETIME DEFAULT CURRENT_DATE,
     blocked_until DATETIME NULL,
@@ -14,22 +16,44 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 
--- 2.Products and locations table
+-- 2.Cabinet table (cabinet info and amount of shelf in it)
+CREATE TABLE IF NOT EXISTS cabinets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cabinet_number INTEGER UNIQUE NOT NULL,
+    shelf_capacity INTEGER DEFAULT 5,
+)
+
+
+-- 3.Shelfs table (shelf info and capacity)
+CREATE TABLE IF NOT EXISTS shelfs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    shelf_number INTEGER UNIQUE NOT NULL,
+    instaled_cabinet_number INTEGER NOT NULL,
+    weight_capacity_grams REAL DEFAULT 20000.0,
+    inventory_capacity INTEGER DEFAULT 20,
+    current_weight_grams REAL NULL,
+    current_inventory INTEGER NULL,
+    FOREIGN KEY (instaled_cabinet_number) REFERENCES cabinets(id)
+)
+
+
+-- 4.Products and locations table
 CREATE TABLE IF NOT EXISTS products (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    unique_code INTEGER UNIQUE NOT NULL,
+    bar_code INTEGER NOT NULL,
     product_name TEXT NOT NULL,
-    price REAL NOT NULL CHECK (price > 0),
+    price REAL NOT NULL CHECK (price >= 0),
+    product_batch TEXT NOT NULL,
     validity DATE NOT NULL,
     weight_gram_unit REAL NOT NULL CHECK (weight_gram_unit > 0),
-    cabinet_id INTEGER NOT NULL,
-    cabinet_shelf_id INTEGER NOT NULL, -- is the weight scale itselfs
+    cabinet_shelf_id INTEGER NOT NULL, -- it is the weight scale itselfs
     total_inventory_amount INTEGER NOT NULL CHECK (total_inventory_amount >= 0),
-    reserved_inventory_amount INTEGER DEFAULT 0 CHECK(reserved_inventory_amount >= 0)
+    reserved_inventory_amount INTEGER DEFAULT 0 CHECK (reserved_inventory_amount >= 0),
+    avaliable BOOLEAN NOT NULL DEFAULT 0 CHECK (avaliable IN(0, 1)) --if product is avaliable or suspended
 );
 
 
--- 3.Reservation table (mobile app)
+-- 5.Reservation table (mobile app)
 CREATE TABLE IF NOT EXISTS reservation (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -42,7 +66,8 @@ CREATE TABLE IF NOT EXISTS reservation (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- 4.Order table (withdrawal and token session)
+
+-- 6.Order table (withdrawal and token session)
 CREATE TABLE IF NOT EXISTS order_kart (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -54,7 +79,8 @@ CREATE TABLE IF NOT EXISTS order_kart (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- 5.Order items table (rel order x purchased)
+
+-- 7.Order items table (rel order x purchased)
 CREATE TABLE IF NOT EXISTS order_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL,
@@ -65,7 +91,8 @@ CREATE TABLE IF NOT EXISTS order_items (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
--- 6.Withdrawal weight audit table (scale register per cabinet shelf)
+
+-- 8.Withdrawal weight audit table (scale register per cabinet shelf)
 CREATE TABLE IF NOT EXISTS withdrawal_audit (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER NOT NULL,

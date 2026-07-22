@@ -2,21 +2,41 @@
 
 import sqlite3
 from typing import Dict, List, Optional
-from server.database.connection import conect_database
+from server.database.connection import connect_database
 
-def new_user(username: str, document: str, type_user: str) -> bool:
+def check_document_already_exist(document: str) -> bool:
+    sql = '''
+        SELECT document FROM users WHERE document = ?
+    '''
+
+    connection = connect_database()
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql, (document,))
+        exists = cursor.fetchone()
+
+        if exists:
+            return True
+        
+        return False
+    finally:
+        connection.close()
+
+
+def new_user(username: str, document: str, phone_number: int, pass_key: str, type_user: str) -> bool:
     '''
     INSERIR UM NOVO USUÁRIO NO BANCO DE DADOS
     '''
     sql = '''
-        INSERT INTO users (username, document, type_user)
-        VALUES (?, ?, ?)
+        INSERT INTO users (username, document, phone_number, pass_key, type_user)
+        VALUES (?, ?, ?, ?)
     '''
-    connection = conect_database()
+    connection = connect_database()
     
     try:
         cursor = connection.cursor()
-        cursor.execute(sql, (username, document, type_user.upper()))
+        cursor.execute(sql, (username, document, phone_number, pass_key, type_user.upper()))
         connection.commit()
         print(f"\n[BANCO DE DADOS] USUÁRIO {username} CADASTRADO NO BANCO DE DADOS COM SUCESSO!\n")
         return True
@@ -24,7 +44,68 @@ def new_user(username: str, document: str, type_user: str) -> bool:
         print(f"\n[BANCO DE DADOS] ERRO: CPF {document} OU TIPO DE USUÁRIO INVÁLIDO")
         return False
     except sqlite3.Error as error:
-        print(f"\n[BANCO DE DADOS] ERRO: PROBLEMA AO EFETUAR CADASTRO DE {username}")
+        print(f"\n[BANCO DE DADOS] ERRO: PROBLEMA AO EFETUAR CADASTRO DE {username}: {error}")
         return False
+    finally:
+        connection.close()
+
+
+def search_user_document(document: str) -> Optional[Dict]:
+    sql = '''
+        SELECT id, username, document, phone_number, type_user, created_time, blocked_until, consecutive_cancel
+        FROM users
+        WHERE document = ?
+    '''
+    
+    connection = connect_database()
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql, (document,))
+        line = cursor.fetchone()
+
+        if line:
+            return {
+                "id": line[0],
+                "username": line[1],
+                "document": line[2],
+                "phone_number": line[3],
+                "type_user": line[4],
+                "created_time": line[5],
+                "blocked_until": line[6],
+                "consecutive_cancel": line[7],
+            }
+        return None
+    finally:
+        connection.close()
+
+
+def list_all_users() -> List[Dict]:
+    sql = '''
+        SELECT id, username, document, phone_number, type_user, created_time
+        FROM users 
+    '''
+
+    connection = connect_database()
+    
+    users_list = []
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        lines = cursor.fetchall()
+
+        for line in lines:
+            users_list.append(
+                {
+                "id": line[0],
+                "username": line[1],
+                "document": line[2],
+                "phone_number": line[3],
+                "type_user": line[4],
+                "created_time": line[5],
+                }
+            )
+        return users_list
     finally:
         connection.close()
