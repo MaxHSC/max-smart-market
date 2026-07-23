@@ -22,12 +22,13 @@ def search_product_name(product_name: str) -> List[Dict]:
     '''
 
     connection = connect_database()
+    cursor = None
 
     products_found_list = []
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql, (product_name))
+        cursor.execute(sql, (product_name,))
         lines = cursor.fetchall()
 
         for line in lines:
@@ -48,7 +49,13 @@ def search_product_name(product_name: str) -> List[Dict]:
             )
 
         return products_found_list
+    
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO NA BUSCA DO PRODUTO: [{error}]\n")
+        return []
     finally:
+        if cursor:
+            cursor.close()
         connection.close()
 
 def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CLIENT) OR EDIT (MANAGER/STOCKER)
@@ -68,6 +75,7 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
     '''
 
     connection = connect_database()
+    cursor = None
 
     products_list = []
 
@@ -94,7 +102,10 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
             )
         
         return products_list
+    
     finally:
+        if cursor:
+            cursor.close()
         connection.close()
 
 def add_new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: datetime.datetime, weight_gram_unit: float, cabinet_shelf_id: int, total_inventory_amount: int) -> bool:
@@ -113,6 +124,7 @@ def add_new_product(bar_code: int, product_name: str, price: float, product_batc
     '''
 
     connection = connect_database()
+    cursor = None
 
     try:
         cursor = connection.cursor()
@@ -120,17 +132,62 @@ def add_new_product(bar_code: int, product_name: str, price: float, product_batc
         connection.commit()
         print(f"\n[BANCO DE DADOS] PRODUTO {product_name} ADICIONADO AO CATÁLOGO COM SUCESSO!\n")
         return True
+    
     except sqlite3.IntegrityError:
-        print(f"\n[BANCO DE DADOS] ERRO: PESO {weight_gram_unit} OU DISPONIBILIDADE INFORMADA INCORRETAMENTE.\n\n")
+        print(f"\n[BANCO DE DADOS] PESO {weight_gram_unit} OU DISPONIBILIDADE INFORMADA INCORRETAMENTE.\n\n")
         return False
+    
     except sqlite3.Error as error:
-        print(f"\n[BANCO DE DADOS] ERRO: PROBLEMA AO EFETUAR CADASTRO DE {product_name}: {error}")
+        print(f"\n[BANCO DE DADOS] PROBLEMA AO EFETUAR CADASTRO DE {product_name}: {error}")
         return False
+    
     finally:
+        if cursor:
+            cursor.close()
         connection.close()
 
-def change_product_info(product_id,key_change,new_value) -> bool:
+def change_product_info(product_id,selected_column,new_value) -> bool:
+    allowed_key_names = [
+        "product_name",
+        "price",
+        "product_batch",
+        "validity",
+        "weight_gram_unit",
+        "cabinet_shelf_id",
+        "total_inventory_amount",
+        "avaliable"
+    ]
+
+    if selected_column not in allowed_key_names:
+        print(f"\n[BANCO DE DADOS] INFORMAÇÃO DE PRODUTO INVÁLIDA: [{selected_column}]\n")
+        return False
     '''
-    INSERIR LÓGICA QUE ALTEAR INFORMAÇÕES DO PRODUTO COM BASE NO PRODUTO SELECIONADO
+    INSERIR LÓGICA QUE ALTERA INFORMAÇÕES DO PRODUTO COM BASE NO PRODUTO SELECIONADO
     PLO USUÁRIO, A PARTIR DO ID DO PRODUTO, OBTIDO NA BUSCA POR NOME OU POR LISTA
     '''
+    sql = f'''
+    UPDATE products SET {selected_column} = ? WHERE id = ?;
+    '''
+
+    connection = connect_database()
+    cursor = None
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql, (new_value, product_id))
+        connection.commit()
+        print(f"\n[BANCO DE DADOS] PRODUTO ATUALIZADO COM SUCESSO\n")
+        return True
+    
+    except sqlite3.IntegrityError:
+        print(f"\n[BANCO DE DADOS] NÃO É POSSÍVEL INSERIR O VALOR INFORMADO [VALOR INVÁLIDO].\n\n")
+        return False
+    
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] NÃO FOI POSSÍVEL ATUALIZAR AS INFORMAÇÕES DO PRODUTO: {error}")
+        return False
+    
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()

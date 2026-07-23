@@ -4,12 +4,13 @@ import sqlite3
 from typing import Dict, List, Optional
 from server.database.connection import connect_database
 
-def check_document_already_exist(document: str) -> bool:
+def check_document_already_exist(document: str) -> bool: #VERIFICA SE O CPF JÁ ESTÁ CADASTRADO
     sql = '''
         SELECT document FROM users WHERE document = ?
     '''
 
     connection = connect_database()
+    cursor = None
 
     try:
         cursor = connection.cursor()
@@ -20,19 +21,27 @@ def check_document_already_exist(document: str) -> bool:
             return True
         
         return False
+    
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO NO BANCO DE DADOS: {error}")
+        return False
+    
     finally:
+        if cursor:
+            cursor.close()
         connection.close()
 
 
-def new_user(username: str, document: str, phone_number: int, pass_key: str, type_user: str) -> bool:
+def new_user(username: str, document: str, phone_number: str, pass_key: str, type_user: str) -> bool:
     '''
     INSERIR UM NOVO USUÁRIO NO BANCO DE DADOS
     '''
     sql = '''
         INSERT INTO users (username, document, phone_number, pass_key, type_user)
-        VALUES (?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?)
     '''
     connection = connect_database()
+    cursor = None
     
     try:
         cursor = connection.cursor()
@@ -40,13 +49,18 @@ def new_user(username: str, document: str, phone_number: int, pass_key: str, typ
         connection.commit()
         print(f"\n[BANCO DE DADOS] USUÁRIO {username} CADASTRADO NO BANCO DE DADOS COM SUCESSO!\n")
         return True
+    
     except sqlite3.IntegrityError:
         print(f"\n[BANCO DE DADOS] ERRO: CPF {document} OU TIPO DE USUÁRIO INVÁLIDO")
         return False
+    
     except sqlite3.Error as error:
         print(f"\n[BANCO DE DADOS] ERRO: PROBLEMA AO EFETUAR CADASTRO DE {username}: {error}")
         return False
+    
     finally:
+        if cursor:
+            cursor.close()
         connection.close()
 
 
@@ -58,6 +72,7 @@ def search_user_document(document: str) -> Optional[Dict]:
     '''
     
     connection = connect_database()
+    cursor = None
 
     try:
         cursor = connection.cursor()
@@ -75,8 +90,16 @@ def search_user_document(document: str) -> Optional[Dict]:
                 "blocked_until": line[6],
                 "consecutive_cancel": line[7],
             }
+
         return None
+    
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO AO CONSULTAR USUÁRIO: {error}\n")
+        return None
+
     finally:
+        if cursor:
+            cursor.close()
         connection.close()
 
 
@@ -87,6 +110,7 @@ def list_all_users() -> List[Dict]:
     '''
 
     connection = connect_database()
+    cursor = None
     
     users_list = []
 
@@ -106,6 +130,14 @@ def list_all_users() -> List[Dict]:
                 "created_time": line[5],
                 }
             )
+
         return users_list
+    
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO AO CONSULTAR USUÁRIO: {error}\n")
+        return []
+
     finally:
+        if cursor:
+            cursor.close()
         connection.close()
