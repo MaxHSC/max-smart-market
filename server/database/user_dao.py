@@ -4,7 +4,7 @@ import sqlite3
 from typing import Dict, List, Optional
 from server.database.connection import connect_database
 
-def check_document_already_exist(document: str) -> bool: #VERIFICA SE O CPF JÁ ESTÁ CADASTRADO
+def check_document_already_exists(document: str) -> bool: #VERIFICA SE O CPF JÁ ESTÁ CADASTRADO
     sql = '''
         SELECT document FROM users WHERE document = ?
     '''
@@ -141,3 +141,5 @@ def list_all_users() -> List[Dict]:
         if cursor:
             cursor.close()
         connection.close()
+
+def 

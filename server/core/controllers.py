@@ -1,1 +1,0 @@
-# Orquestra as ações (Ex: Se comando é "RES", chama o banco e valida)

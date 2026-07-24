@@ -2,7 +2,7 @@
 import sqlite3
 from typing import Dict, List, Optional
 from server.database.connection import connect_database, start_database
-import datetime
+from datetime import datetime
 
 def search_product_name(product_name: str) -> List[Dict]:
     sql = '''
@@ -15,12 +15,14 @@ def search_product_name(product_name: str) -> List[Dict]:
         weight_gram_unit,
         cabinet_shelf_id,
         total_inventory_amount,
-        reserverd_inventory_amount,
+        reserved_inventory_amount,
         avaliable
         FROM products
-        WHERE product_name = ?
+        WHERE product_name LIKE ?
     '''
 
+    
+    start_database()
     connection = connect_database()
     cursor = None
 
@@ -28,7 +30,7 @@ def search_product_name(product_name: str) -> List[Dict]:
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql, (product_name,))
+        cursor.execute(sql, (f"%{product_name}%",))
         lines = cursor.fetchall()
 
         for line in lines:
@@ -43,11 +45,11 @@ def search_product_name(product_name: str) -> List[Dict]:
                     "weight_gram_unit":line[6],
                     "cabinet_shelf_id":line[7],
                     "total_inventory_amount":line[8],
-                    "reserverd_inventory_amount":line[9],
+                    "reserved_inventory_amount":line[9],
                     "avaliable":line[10]
                 }
             )
-
+            
         return products_found_list
     
     except sqlite3.Error as error:
@@ -69,11 +71,13 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
         weight_gram_unit,
         cabinet_shelf_id,
         total_inventory_amount,
-        reserverd_inventory_amount,
+        reserved_inventory_amount,
         avaliable
         FROM products
     '''
 
+    
+    start_database()
     connection = connect_database()
     cursor = None
 
@@ -96,7 +100,7 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
                     "weight_gram_unit":line[6],
                     "cabinet_shelf_id":line[7],
                     "total_inventory_amount":line[8],
-                    "reserverd_inventory_amount":line[9],
+                    "reserved_inventory_amount":line[9],
                     "avaliable":line[10],
                 }
             )
@@ -108,7 +112,7 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
             cursor.close()
         connection.close()
 
-def add_new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: datetime.datetime, weight_gram_unit: float, cabinet_shelf_id: int, total_inventory_amount: int) -> bool:
+def add_new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: str, weight_gram_unit: float, cabinet_shelf_id: int, total_inventory_amount: int) -> bool:
     sql = '''
         INSERT INTO products (
         bar_code,
@@ -122,7 +126,7 @@ def add_new_product(bar_code: int, product_name: str, price: float, product_batc
         )
         VALUES (?,?,?,?,?,?,?,?)
     '''
-
+    start_database()
     connection = connect_database()
     cursor = None
 
@@ -147,20 +151,6 @@ def add_new_product(bar_code: int, product_name: str, price: float, product_batc
         connection.close()
 
 def change_product_info(product_id,selected_column,new_value) -> bool:
-    allowed_key_names = [
-        "product_name",
-        "price",
-        "product_batch",
-        "validity",
-        "weight_gram_unit",
-        "cabinet_shelf_id",
-        "total_inventory_amount",
-        "avaliable"
-    ]
-
-    if selected_column not in allowed_key_names:
-        print(f"\n[BANCO DE DADOS] INFORMAÇÃO DE PRODUTO INVÁLIDA: [{selected_column}]\n")
-        return False
     '''
     INSERIR LÓGICA QUE ALTERA INFORMAÇÕES DO PRODUTO COM BASE NO PRODUTO SELECIONADO
     PLO USUÁRIO, A PARTIR DO ID DO PRODUTO, OBTIDO NA BUSCA POR NOME OU POR LISTA
@@ -168,7 +158,8 @@ def change_product_info(product_id,selected_column,new_value) -> bool:
     sql = f'''
     UPDATE products SET {selected_column} = ? WHERE id = ?;
     '''
-
+    
+    start_database()
     connection = connect_database()
     cursor = None
 
