@@ -6,7 +6,10 @@ from server.database.connection import connect_database
 
 def check_document_already_exists(document: str) -> bool: #VERIFICA SE O CPF JÁ ESTÁ CADASTRADO
     sql = '''
-        SELECT document FROM users WHERE document = ?
+        SELECT 1
+        FROM users 
+        WHERE document = ?
+        LIMIT 1
     '''
 
     connection = connect_database()
@@ -15,6 +18,37 @@ def check_document_already_exists(document: str) -> bool: #VERIFICA SE O CPF JÁ
     try:
         cursor = connection.cursor()
         cursor.execute(sql, (document,))
+        exists = cursor.fetchone()
+
+        if exists:
+            return True
+        
+        return False
+    
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO NO BANCO DE DADOS: {error}")
+        return False
+    
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+
+
+def check_phone_already_exists(phone_number: str) -> bool: #VERIFICA SE O TELEFONE JÁ ESTÁ CADASTRADO
+    sql = '''
+        SELECT 1 
+        FROM users 
+        WHERE phone_number = ?
+        LIMIT 1
+    '''
+
+    connection = connect_database()
+    cursor = None
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql, (phone_number,))
         exists = cursor.fetchone()
 
         if exists:
@@ -142,4 +176,40 @@ def list_all_users() -> List[Dict]:
             cursor.close()
         connection.close()
 
-def 
+def confirm_login_user(phone_login: str, pass_key: str):
+    sql = '''
+        SELECT id, username, phone_number, pass_key, type_user, blocked_until
+        FROM users
+        WHERE phone_number = ?
+        LIMIT 1
+    '''
+
+    connection = connect_database()
+    cursor = None
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql,(phone_login))
+        line = cursor.fetchone()
+
+        if line:
+            if pass_key == line[3]:
+                user_info = {
+                    "id":line[0],
+                    "username":line[1],
+                    "phone_number":line[2],
+                    "type_user":line[4],
+                    "blocked_until":line[5]
+                }
+                
+                return user_info
+            return False
+
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO AO CONSULTAR USUÁRIO: {error}\n")
+        return False
+
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()

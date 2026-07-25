@@ -182,3 +182,28 @@ def change_product_info(product_id,selected_column,new_value) -> bool:
         if cursor:
             cursor.close()
         connection.close()
+
+def checkout_cart(cart: list) -> bool: #cart ALWAYS MUST TO BE A LIST OF DICT [{"id":19,"amount":3}]
+    sql = '''
+        UPDATE products
+        SET total_inventory_amount = total_inventory_amount - :amount
+        WHERE id :id
+        AND total_inventory_amount >= :amount
+    '''
+
+    connection = connect_database()
+    cursor = None
+
+    try:
+        cursor = connection.cursor()
+        cursor.executemany(sql, cart)
+
+        if cursor.rowcount != len(cart):
+            raise ValueError("\n[BANCO DE DADOS - VENDAS] UM OU MAIS ITENS SEM ESTOQUE SUFICIENTE.\n")
+
+        print(f"\n[BANCO DE DADOS - VENDAS] VENDA CONFIRMADA COM SUCESSO, PODE RECOLHER SEUS PRODUTOS.\n")
+        return True
+
+    except (sqlite3.Error, ValueError) as error:
+        print(f"\n[BANCO DE DADOS - VENDAS] VENDA NÃO EFETUADA: {error}\n")
+        return False

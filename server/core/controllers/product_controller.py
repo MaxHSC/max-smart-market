@@ -55,3 +55,6 @@ def search_product_name(product_name) -> list:
 
 def list_all_products() -> list:
     return inv.list_all_products()
+
+def checkou_cart(cart: list) -> bool:
+    return inv.checkout_cart(cart)

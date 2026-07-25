@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL,
     document TEXT UNIQUE NOT NULL,
-    phone_number TEXT NOT NULL,
+    phone_number TEXT UNIQUE NOT NULL, --phone_number IS THE USER LOGIN
     pass_key TEXT NOT NULL,
     type_user TEXT NOT NULL CHECK (type_user IN('CLIENTE','GERENTE','COLABORADOR')),
     created_time DATETIME DEFAULT CURRENT_DATE,
