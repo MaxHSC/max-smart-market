@@ -19,21 +19,20 @@ CREATE TABLE IF NOT EXISTS users (
 -- 2.Cabinet table (cabinet info and amount of shelf in it)
 CREATE TABLE IF NOT EXISTS cabinets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cabinet_number INTEGER UNIQUE NOT NULL,
-    shelf_capacity INTEGER DEFAULT 5
+    shelf_capacity INTEGER DEFAULT 5,
+    current_installed_shelf INTEGER NULL
 );
 
 
 -- 3.Shelfs table (shelf info and capacity)
 CREATE TABLE IF NOT EXISTS shelfs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    shelf_number INTEGER UNIQUE NOT NULL,
-    instaled_cabinet_number INTEGER NOT NULL,
+    installed_cabinet_id INTEGER NOT NULL,
     weight_capacity_grams REAL DEFAULT 20000.0,
     inventory_capacity INTEGER DEFAULT 20,
     current_weight_grams REAL NULL,
     current_inventory INTEGER NULL,
-    FOREIGN KEY (instaled_cabinet_number) REFERENCES cabinets(id)
+    FOREIGN KEY (installed_cabinet_id) REFERENCES cabinets(id)
 );
 
 

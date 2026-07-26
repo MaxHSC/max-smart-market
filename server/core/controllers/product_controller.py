@@ -27,6 +27,7 @@ def change_product_info(product_id,selected_column,new_value) -> bool:
     try:
         allowed_key_names = [
                 "product_name",
+                "bar_code",
                 "price",
                 "product_batch",
                 "validity",
@@ -58,3 +59,86 @@ def list_all_products() -> list:
 
 def checkou_cart(cart: list) -> bool:
     return inv.checkout_cart(cart)
+
+
+
+
+
+
+
+
+
+
+#region TEST AREA
+
+# def test_cart_checkout():
+#     cart_list = [{"id":7,"amount":1},{"id":5,"amount":1},{"id":1,"amount":4},{"id":4,"amount":3}]
+
+#     checkou_cart(cart_list)
+
+
+
+
+# def test_new_product():
+#     prod = [
+#         12368974,
+#         "PIZZA CONGELADA SADIA MUSSARELA",
+#         16.00,
+#         "SDAMCZ260726PZML",
+#         "2028-07-26",
+#         460.0,
+#         15,
+#         4
+#     ]
+
+#     bar_code = prod[0]
+#     product_name = prod[1]
+#     price = prod[2]
+#     product_batch = prod[3]
+#     validity = prod[4]
+#     weight_gram_unit = prod[5]
+#     cabinet_shelf_id = prod[6]
+#     total_inventory_amount = prod[7]
+
+#     new_product(bar_code, product_name, price, product_batch, validity, weight_gram_unit, cabinet_shelf_id, total_inventory_amount)
+#     pass
+
+# def test_list_prod():
+#     prod_list = list_all_products()
+
+#     for prod in prod_list:
+#         print("\n--------[INFORMAÇÕES DO PRODUTO]-------")
+#         print(f"[PRODUTO] {prod["product_name"]}")
+#         print(f"[PREÇO] R${prod["price"]}")
+#         print(f"[VALIDADE] {prod["validity"]}")
+#         print(f"[PESO EM GRAMAS] {prod["weight_gram_unit"]}g")
+#         print(f"[ID] {prod["id"]}")
+#         print(f"[CÓDIGO DE BARRAS] {prod["bar_code"]}")
+#         print(f"[PRATELEIRA] N#{prod["cabinet_shelf_id"]}")
+#         print(f"[QUANTIDADE DISPONÍVEL] {prod["total_inventory_amount"]}")
+#         print("\n\n")
+
+# def test_change_prod_info():
+#     product_id = 2
+#     selected_column = "total_inventory_amount"
+#     new_value = 10
+
+#     change_product_info(product_id,selected_column,new_value)
+
+#     prod_list = search_product_name("350")
+
+#     for prod in prod_list:
+#         print("\n--------[INFORMAÇÕES DO PRODUTO]-------")
+#         print(f"[PRODUTO] {prod["product_name"]}")
+#         print(f"[PREÇO] R${prod["price"]}")
+#         print(f"[VALIDADE] {prod["validity"]}")
+#         print(f"[PESO EM GRAMAS] {prod["weight_gram_unit"]}g")
+#         print(f"[ID] {prod["id"]}")
+#         print(f"[CÓDIGO DE BARRAS] {prod["bar_code"]}")
+#         print(f"[PRATELEIRA] N#{prod["cabinet_shelf_id"]}")
+#         print(f"[QUANTIDADE DISPONÍVEL] {prod["total_inventory_amount"]}")
+#         print("\n\n")
+
+#     pass
+
+#endregion
