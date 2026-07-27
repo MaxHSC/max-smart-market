@@ -11,7 +11,7 @@ from server.database.connection import connect_database, start_database
 def add_new_cabinet() -> bool:
     sql = '''
         INSERT INTO cabinets (
-        current_shelf_installed
+        current_installed_shelf
         )
         VALUES (0)
     '''
@@ -36,6 +36,46 @@ def add_new_cabinet() -> bool:
             cursor.close()
         connection.close()
 
+def list_all_cabinets() -> List[Dict]:
+    sql = '''
+        SELECT id,
+        shelf_capacity,
+        current_installed_shelf
+        FROM cabinets
+    '''
+
+    start_database()
+    connection = connect_database()
+    cursor = None
+
+    cabinet_list = []
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        cabinets = cursor.fetchall()
+
+        for cabinet in cabinets:
+            cabinet_list.append(
+                {
+                    "id":cabinet[0],
+                    "shelf_capacity": cabinet[1],
+                    "current_installed_shelf":cabinet[2],
+                }
+            )
+        return cabinet_list
+
+    except sqlite3.Error as error:
+        connection.rollback()
+        print(f"\n[BANCO DE DADO] ERRO AO BUSCAR ARMÁRIOS: [{error}]")
+        return []
+
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+
+
 def add_new_shelf(installed_cabinet_id: int) -> bool:
     sql_create_shelf = '''
         INSERT INTO shelfs (
@@ -48,7 +88,7 @@ def add_new_shelf(installed_cabinet_id: int) -> bool:
         UPDATE cabinets
         SET current_installed_shelf = COALESCE(current_installed_shelf, 0) + 1
         WHERE id = ?
-            AND COALESCE(current_insatlled_shelf, 0) < shelf_capacity
+            AND COALESCE(current_installed_shelf, 0) < shelf_capacity
     '''
 
     start_database()
@@ -57,14 +97,21 @@ def add_new_shelf(installed_cabinet_id: int) -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql_create_shelf, (installed_cabinet_id,))
         cursor.execute(sql_update_cabinet, (installed_cabinet_id,))
+
+        if cursor.rowcount == 0:
+            connection.rollback()
+            print(f"\n[BANCO DE DADOS] ARMÁRIO {installed_cabinet_id} ATINGIU A CAPACIDADE MÁXIMA DE PRATELEIRAS INSTALADAS.\n")
+            return False
+        
+        cursor.execute(sql_create_shelf, (installed_cabinet_id,))
         connection.commit()
         print(f"\n[BANCO DE DADOS] PRATELEIRA VINCULADA AO ARMÁRIO INTELIGENTE [{installed_cabinet_id}] COM SUCESSO.\n")
         return True
-    
+
     except sqlite3.Error as error:
-        connection.rollback()
+        if connection:
+            connection.rollback()
         print(f"\n[BANCO DE DADO] NÃO FOI POSSÍVEL VINCULAR PRATELEIRA: [{error}]")
         return False
 
@@ -73,7 +120,7 @@ def add_new_shelf(installed_cabinet_id: int) -> bool:
             cursor.close()
         connection.close()
 
-def list_all_installed_shelf():
+def list_all_installed_shelf() -> List[Dict]:
     sql = '''
         SELECT id,
         installed_cabinet_id,
@@ -99,15 +146,20 @@ def list_all_installed_shelf():
             installed_shelf_list.append(
                 {
                     "id":shelf[0],
-                    "installed_cabinet_id":shelf[0],
-                    "weight_capacity_grams":shelf[1],
-                    "inventory_capacity":shelf[2],
-                    "current_weight_grams":shelf[3],
-                    "current_inventory":shelf[4],
+                    "installed_cabinet_id":shelf[1],
+                    "weight_capacity_grams":shelf[2],
+                    "inventory_capacity":shelf[3],
+                    "current_weight_grams":shelf[4],
+                    "current_inventory":shelf[5],
                 }
             )
         
         return installed_shelf_list
+    
+    except sqlite3.Error as error:
+        connection.rollback()
+        print(f"\n[BANCO DE DADO] ERRO AO BUSCAR PRATELEIRAS: [{error}]")
+        return []
 
     finally:
         if cursor:
@@ -135,7 +187,7 @@ def search_shelf_id(shelf_id: int) -> Dict:
     try:
         cursor = connection.cursor()
         cursor.execute(sql, (shelf_id,))
-        shelf = cursor.fetchone
+        shelf = cursor.fetchone()
 
         shelf_info = {
             "id": shelf[0],
@@ -147,9 +199,59 @@ def search_shelf_id(shelf_id: int) -> Dict:
         }
 
         return shelf_info
+    
+    except sqlite3.Error as error:
+        connection.rollback()
+        print(f"\n[BANCO DE DADO] ERRO AO BUSCAR PRATELEIRA: [{error}]")
+        return {}
 
     finally:
         if cursor:
             cursor.close()
         connection.close()
 
+
+# def test_new_cabinet():
+#     for i in range(3):
+#         add_new_cabinet()
+
+#     cabinet_list = list_all_cabinets()
+
+#     for i in cabinet_list:
+#         print(f"\n[BANCO DE DADOS TESTE] ARMÁRIO INTELIGENTE\n")
+#         print(f"[BANCO DE DADOS TESTE] ID [{i["id"]}]")
+#         print(f"[BANCO DE DADOS TESTE] CAPACIDADE [{i["shelf_capacity"]}]")
+#         print(f"[BANCO DE DADOS TESTE] PRATELEIRAS INSTALADAS [{i["current_installed_shelf"]}]\n")
+
+#     pass
+
+# def test_new_shelf():
+#     # for i in range(4):
+#     #     add_new_shelf(1)
+
+#     # for i in range(5):
+#     #     add_new_shelf(2)
+
+#     for i in range(6):
+#         add_new_shelf(3)
+
+
+#     shelf_list = list_all_installed_shelf()
+
+#     for i in shelf_list:
+#         print(f"\n[BANCO DE DADOS TESTE] PRATELEIRAS BALANÇA")
+#         print(f"[BANCO DE DADOS TESTE] ID [{i["id"]}]")
+#         print(f"[BANCO DE DADOS TESTE] INSTALADO NO ARMÁRIO ID [{i["installed_cabinet_id"]}]")
+#         print(f"[BANCO DE DADOS TESTE] CAPACIDADE TOTAL DE PESO [{i["weight_capacity_grams"]}]")
+#         print(f"[BANCO DE DADOS TESTE] CAPACIDADE TOTAL DE VOLUMES [{i["inventory_capacity"]}]")
+#         print(f"[BANCO DE DADOS TESTE] PESO ATUAL [{i["current_weight_grams"]}]")
+#         print(f"[BANCO DE DADOS TESTE] VOLUME ATUAL [{i["current_inventory"]}]\n")
+        
+#     pass
+
+    # "id":shelf[0],
+    # "installed_cabinet_id":shelf[1],
+    # "weight_capacity_grams":shelf[2],
+    # "inventory_capacity":shelf[3],
+    # "current_weight_grams":shelf[4],
+    # "current_inventory":shelf[5],

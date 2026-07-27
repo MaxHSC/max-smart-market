@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS cabinets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     shelf_capacity INTEGER DEFAULT 5,
-    current_installed_shelf INTEGER NULL
+    current_installed_shelf INTEGER NULL CHECK (current_installed_shelf <= shelf_capacity)
 );
 
 
@@ -30,8 +30,8 @@ CREATE TABLE IF NOT EXISTS shelfs (
     installed_cabinet_id INTEGER NOT NULL,
     weight_capacity_grams REAL DEFAULT 20000.0,
     inventory_capacity INTEGER DEFAULT 20,
-    current_weight_grams REAL NULL,
-    current_inventory INTEGER NULL,
+    current_weight_grams REAL NULL CHECK (current_weight_grams <= weight_capacity_grams),
+    current_inventory INTEGER NULL CHECK (current_inventory <= inventory_capacity),
     FOREIGN KEY (installed_cabinet_id) REFERENCES cabinets(id)
 );
 
@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS products (
     total_inventory_amount INTEGER NOT NULL CHECK (total_inventory_amount >= 0),
     reserved_inventory_amount INTEGER DEFAULT 0 CHECK (reserved_inventory_amount >= 0),
     avaliable BOOLEAN NOT NULL DEFAULT 0 CHECK (avaliable IN(0, 1)) --if product is avaliable or suspended
+    FOREIGN KEY (cabinet_shelf_id) REFERENCES shelfs(id)
 );
 
 
