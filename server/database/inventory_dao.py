@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 from server.database.connection import connect_database, start_database
 from datetime import datetime
 
+#region ONLY READ DATABASE
 def get_shelf_id(product_id: int, cursor) -> int:
     sql = '''
         SELECT id, cabinet_shelf_id
@@ -15,7 +16,7 @@ def get_shelf_id(product_id: int, cursor) -> int:
         cursor.execute(sql, (product_id,))
         product_line = cursor.fetchone()
 
-        product_shelf_id = product_line[7]
+        product_shelf_id = product_line[1]
             
         return product_shelf_id
     
@@ -32,10 +33,10 @@ def search_product_name(product_name: str) -> List[Dict]:
         price,
         product_batch,
         validity,
-        weight_gram_unit,
+        product_weight,
         cabinet_shelf_id,
-        total_inventory_amount,
-        reserved_inventory_amount,
+        product_volume,
+        reserved_volume_amount,
         avaliable
         FROM products
         WHERE product_name LIKE ?
@@ -62,10 +63,10 @@ def search_product_name(product_name: str) -> List[Dict]:
                     "price":line[3],
                     "product_batch":line[4],
                     "validity":line[5],
-                    "weight_gram_unit":line[6],
+                    "product_weight":line[6],
                     "cabinet_shelf_id":line[7],
-                    "total_inventory_amount":line[8],
-                    "reserved_inventory_amount":line[9],
+                    "product_volume":line[8],
+                    "reserved_volume_amount":line[9],
                     "avaliable":line[10]
                 }
             )
@@ -88,15 +89,14 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
         price,
         product_batch,
         validity,
-        weight_gram_unit,
+        product_weight,
         cabinet_shelf_id,
-        total_inventory_amount,
-        reserved_inventory_amount,
+        product_volume,
+        reserved_volume_amount,
         avaliable
         FROM products
     '''
 
-    
     start_database()
     connection = connect_database()
     cursor = None
@@ -117,10 +117,10 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
                     "price":line[3],
                     "product_batch":line[4],
                     "validity":line[5],
-                    "weight_gram_unit":line[6],
+                    "product_weight":line[6],
                     "cabinet_shelf_id":line[7],
-                    "total_inventory_amount":line[8],
-                    "reserved_inventory_amount":line[9],
+                    "product_volume":line[8],
+                    "reserved_volume_amount":line[9],
                     "avaliable":line[10],
                 }
             )
@@ -131,8 +131,10 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
         if cursor:
             cursor.close()
         connection.close()
+#endregion
 
-def add_new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: str, weight_gram_unit: float, cabinet_shelf_id: int, total_inventory_amount: int) -> bool:
+#region MANAGE DATABASE
+def add_new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: str, product_weight: float, cabinet_shelf_id: int, product_volume: int, shelf_new_weight: float, shelf_new_volume: int) -> bool:
     sql_product = '''
         INSERT INTO products (
         bar_code,
@@ -140,20 +142,18 @@ def add_new_product(bar_code: int, product_name: str, price: float, product_batc
         price,
         product_batch,
         validity,
-        weight_gram_unit,
+        product_weight,
         cabinet_shelf_id,
-        total_inventory_amount
+        product_volume
         )
         VALUES (?,?,?,?,?,?,?,?)
     '''
 
     sql_shelf = '''
         UPDATE shelfs
-        SET current_weight_grams = COALESCE(current_weight_grams, 0) + (?*?),
-            current_inventory = COALESCE(current_inventory, 0) + (?)
+        SET current_weight_grams = ?,
+            current_volume = ?
         WHERE id = ?
-            AND COALESCE(current_weight_grams, 0) + (?*?) <= weight_capacity_grams
-            AND COALESCE(current_inventory, 0) + (?) <= inventory_capacity
     '''
 
     start_database()
@@ -162,21 +162,17 @@ def add_new_product(bar_code: int, product_name: str, price: float, product_batc
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql_shelf, (weight_gram_unit,total_inventory_amount,total_inventory_amount,cabinet_shelf_id,weight_gram_unit,total_inventory_amount,total_inventory_amount))
 
-        if cursor.rowcount == 0:
-            connection.rollback()
-            print(f"\n[BANCO DE DADOS] NÃO FOI POSSÍVEL ADICIONAR O(S) PRODUTO(S) NA PRATELEIRA {cabinet_shelf_id}, CAPACIDADE DE PESO OU VOLUMES ATINGIU O LIMITE. TENTE OUTRA PRATELEIRA.\n")
-            return False
+        cursor.execute(sql_shelf, (shelf_new_weight,shelf_new_volume,cabinet_shelf_id))
+        cursor.execute(sql_product, (bar_code,product_name,price,product_batch,validity,product_weight,cabinet_shelf_id,product_volume))
 
-        cursor.execute(sql_product, (bar_code,product_name,price,product_batch,validity,weight_gram_unit,cabinet_shelf_id,total_inventory_amount))
         connection.commit()
         print(f"\n[BANCO DE DADOS] PRODUTO {product_name} ADICIONADO AO CATÁLOGO COM SUCESSO!\n")
         return True
     
     except sqlite3.IntegrityError:
         connection.rollback()
-        print(f"\n[BANCO DE DADOS] PESO {weight_gram_unit} OU DISPONIBILIDADE INFORMADA INCORRETAMENTE.\n\n")
+        print(f"\n[BANCO DE DADOS] PESO {product_weight} OU DISPONIBILIDADE INFORMADA INCORRETAMENTE.\n\n")
         return False
     
     except sqlite3.Error as error:
@@ -189,13 +185,19 @@ def add_new_product(bar_code: int, product_name: str, price: float, product_batc
             cursor.close()
         connection.close()
 
-def change_product_info(product_id,selected_column,new_value) -> bool:
+def change_product_info(product_id,selected_column,new_value,command=None,shelf_id=None,shelf_new_weight=None,shelf_new_volume=None) -> bool:
     '''
     INSERIR LÓGICA QUE ALTERA INFORMAÇÕES DO PRODUTO COM BASE NO PRODUTO SELECIONADO
-    PLO USUÁRIO, A PARTIR DO ID DO PRODUTO, OBTIDO NA BUSCA POR NOME OU POR LISTA
+    PELO USUÁRIO, A PARTIR DO ID DO PRODUTO, OBTIDO NA BUSCA POR NOME OU POR LISTA
     '''
-    sql = f'''
-    UPDATE products SET {selected_column} = ? WHERE id = ?;
+    sql_product = f'''
+        UPDATE products SET {selected_column} = ? WHERE id = ?;
+    '''
+    sql_shelf = '''
+        UPDATE shelfs
+        SET current_weight_grams = ?,
+            current_volume = ?
+        WHERE id = ?
     '''
     
     start_database()
@@ -204,16 +206,22 @@ def change_product_info(product_id,selected_column,new_value) -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql, (new_value, product_id))
+
+        if command:
+            cursor.execute(sql_shelf, (shelf_new_weight,shelf_new_volume,shelf_id))
+        cursor.execute(sql_product, (new_value, product_id))
+
         connection.commit()
         print(f"\n[BANCO DE DADOS] PRODUTO ATUALIZADO COM SUCESSO\n")
         return True
     
     except sqlite3.IntegrityError:
+        connection.rollback()
         print(f"\n[BANCO DE DADOS] NÃO É POSSÍVEL INSERIR O VALOR INFORMADO [VALOR INVÁLIDO].\n\n")
         return False
     
     except sqlite3.Error as error:
+        connection.rollback()
         print(f"\n[BANCO DE DADOS] NÃO FOI POSSÍVEL ATUALIZAR AS INFORMAÇÕES DO PRODUTO: {error}")
         return False
     
@@ -222,46 +230,37 @@ def change_product_info(product_id,selected_column,new_value) -> bool:
             cursor.close()
         connection.close()
 
-def checkout_cart(cart: list) -> bool: #cart ALWAYS MUST TO BE A LIST OF DICT [{"id":19,"amount":3}]
+def checkout_cart(cart: list) -> bool: #cart ALWAYS MUST TO BE A LIST OF DICT [{"id":19,"product_volume":3,"cabinet_shelf_id":5,"new_shelf_weight":15.0,"new_shelf_volume":15}]
     sql_products = '''
         UPDATE products
-        SET total_inventory_amount = total_inventory_amount - :amount
+        SET product_volume = product_volume - :product_volume
         WHERE id = :id
-        AND total_inventory_amount >= :amount
+            AND product_volume >= :product_volume
     '''
 
     sql_shelfs = '''
         UPDATE shelfs
-        SET current_weight_grams = COALESCE(current_weight_grams, 0) - (?*?),
-            current_inventory = COALESCE(current_inventory, 0) - (?)
-        WHERE id = ?
-            AND COALESCE(current_weight_grams, 0) - (?*?) >= 0
-            AND COALESCE(current_inventory, 0) - (?) >= 0
-        '''
-    
-    
+        SET current_weight_grams = :new_shelf_weight,
+            current_volume = :new_shelf_volume
+        WHERE id = :cabinet_shelf_id
+    '''
 
+    start_database()
     connection = connect_database()
     cursor = None
 
     try:
         cursor = connection.cursor()
 
+        cursor.executemany(sql_shelfs, cart)
+
         for prod in cart:
-            shelf_id: int = get_shelf_id(prod["id"],cursor)
-            prod_weight = prod["weight_gram_unit"]
-            prod_amount = prod["amount"]
-            cursor.execute(sql_shelfs, (prod_weight,prod_amount,prod_amount,shelf_id,prod_weight,prod_amount,prod_amount,))
+            cursor.execute(sql_products, prod)
+
             if cursor.rowcount == 0:
                 connection.rollback()
-                print(f"\n[BANCO DE DADOS - CHEKOUT] ERRO AO REMOVER PRODUTOS DAS PRATELEIRAS. VENDA CANCELADA.\n")
+                print(f"\n[BANCO DE DADOS - CHEKOUT] UM OU MAIS ITENS SEM ESTOQUE SUFICIENTE. VENDA CANCELADA. [{prod['id']}]\n")
                 return False
-
-        cursor.executemany(sql_products, cart)
-
-        if cursor.rowcount != len(cart):
-            connection.rollback()
-            raise ValueError("\n[BANCO DE DADOS - CHEKOUT] UM OU MAIS ITENS SEM ESTOQUE SUFICIENTE.\n")
 
         connection.commit()
         print(f"\n[BANCO DE DADOS - CHEKOUT] VENDA CONFIRMADA COM SUCESSO, PODE RECOLHER SEUS PRODUTOS.\n")
@@ -276,3 +275,5 @@ def checkout_cart(cart: list) -> bool: #cart ALWAYS MUST TO BE A LIST OF DICT [{
         if cursor:
             cursor.close()
         connection.close()
+
+#endregion

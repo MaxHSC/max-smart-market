@@ -1,39 +1,35 @@
 from server.database import inventory_dao as inv
+from server.core.models import products_models as prod_mod
 
 
-def new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: str, weight_gram_unit: float, cabinet_shelf_id: int, total_inventory_amount: int) -> bool:
+def new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: str, product_weight: float, cabinet_shelf_id: int, product_volume: int) -> bool:
     try:
         if price < 0:
             print(f"\n[BANCO DE DADOS] INFORMAÇÃO DE PRODUTO INVÁLIDA: VALOR [{price}]\n")
             return False
         
-        if weight_gram_unit <= 0:
-            print(f"\n[BANCO DE DADOS] INFORMAÇÃO DE PRODUTO INVÁLIDA: PESO [{weight_gram_unit}]\n")
+        if product_weight <= 0:
+            print(f"\n[BANCO DE DADOS] INFORMAÇÃO DE PRODUTO INVÁLIDA: PESO [{product_weight}]\n")
             return False
         
-        if total_inventory_amount < 0:
-            print(f"\n[BANCO DE DADOS] INFORMAÇÃO DE PRODUTO INVÁLIDA: QUANTIDADE [{total_inventory_amount}]\n")
+        if product_volume < 0:
+            print(f"\n[BANCO DE DADOS] INFORMAÇÃO DE PRODUTO INVÁLIDA: QUANTIDADE [{product_volume}]\n")
             return False
 
-        inv.add_new_product(bar_code, product_name, price, product_batch, validity, weight_gram_unit, cabinet_shelf_id, total_inventory_amount)
+        result = prod_mod.new_product_shelf_check(bar_code, product_name, price, product_batch, validity, product_weight, cabinet_shelf_id, product_volume)
+
+        return result
 
     except ValueError:
         return False
 
-    return True
 
-
-def change_product_info(product_id,selected_column,new_value) -> bool:
+def change_product_info(product_id,selected_column,new_value,command=None,product_weight=None) -> bool:
     try:
         allowed_key_names = [
                 "product_name",
-                "bar_code",
                 "price",
-                "product_batch",
-                "validity",
-                "weight_gram_unit",
-                "cabinet_shelf_id",
-                "total_inventory_amount",
+                "product_volume",
                 "avaliable"
             ]
         
@@ -44,7 +40,7 @@ def change_product_info(product_id,selected_column,new_value) -> bool:
         if selected_column == "price" and new_value < 0:
             raise ValueError("\n[BANCO DE DADOS - INVENTÁRIO] PREÇO INVÁLIDO.")
 
-        inv.change_product_info(product_id,selected_column,new_value)
+        inv.change_product_info(product_id,selected_column,new_value,command,product_weight)
 
     except ValueError:
         return False
@@ -57,7 +53,7 @@ def search_product_name(product_name) -> list:
 def list_all_products() -> list:
     return inv.list_all_products()
 
-def checkou_cart(cart: list) -> bool:
+def checkout_cart(cart: list) -> bool:
     return inv.checkout_cart(cart)
 
 
@@ -96,11 +92,11 @@ def checkou_cart(cart: list) -> bool:
 #     price = prod[2]
 #     product_batch = prod[3]
 #     validity = prod[4]
-#     weight_gram_unit = prod[5]
+#     product_weight = prod[5]
 #     cabinet_shelf_id = prod[6]
-#     total_inventory_amount = prod[7]
+#     product_volume = prod[7]
 
-#     new_product(bar_code, product_name, price, product_batch, validity, weight_gram_unit, cabinet_shelf_id, total_inventory_amount)
+#     new_product(bar_code, product_name, price, product_batch, validity, product_weight, cabinet_shelf_id, product_volume)
 #     pass
 
 # def test_list_prod():
@@ -111,16 +107,16 @@ def checkou_cart(cart: list) -> bool:
 #         print(f"[PRODUTO] {prod["product_name"]}")
 #         print(f"[PREÇO] R${prod["price"]}")
 #         print(f"[VALIDADE] {prod["validity"]}")
-#         print(f"[PESO EM GRAMAS] {prod["weight_gram_unit"]}g")
+#         print(f"[PESO EM GRAMAS] {prod["product_weight"]}g")
 #         print(f"[ID] {prod["id"]}")
 #         print(f"[CÓDIGO DE BARRAS] {prod["bar_code"]}")
 #         print(f"[PRATELEIRA] N#{prod["cabinet_shelf_id"]}")
-#         print(f"[QUANTIDADE DISPONÍVEL] {prod["total_inventory_amount"]}")
+#         print(f"[QUANTIDADE DISPONÍVEL] {prod["product_volume"]}")
 #         print("\n\n")
 
 # def test_change_prod_info():
 #     product_id = 2
-#     selected_column = "total_inventory_amount"
+#     selected_column = "product_volume"
 #     new_value = 10
 
 #     change_product_info(product_id,selected_column,new_value)
@@ -132,11 +128,11 @@ def checkou_cart(cart: list) -> bool:
 #         print(f"[PRODUTO] {prod["product_name"]}")
 #         print(f"[PREÇO] R${prod["price"]}")
 #         print(f"[VALIDADE] {prod["validity"]}")
-#         print(f"[PESO EM GRAMAS] {prod["weight_gram_unit"]}g")
+#         print(f"[PESO EM GRAMAS] {prod["product_weight"]}g")
 #         print(f"[ID] {prod["id"]}")
 #         print(f"[CÓDIGO DE BARRAS] {prod["bar_code"]}")
 #         print(f"[PRATELEIRA] N#{prod["cabinet_shelf_id"]}")
-#         print(f"[QUANTIDADE DISPONÍVEL] {prod["total_inventory_amount"]}")
+#         print(f"[QUANTIDADE DISPONÍVEL] {prod["product_volume"]}")
 #         print("\n\n")
 
 #     pass

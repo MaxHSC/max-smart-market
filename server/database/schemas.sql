@@ -29,9 +29,9 @@ CREATE TABLE IF NOT EXISTS shelfs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     installed_cabinet_id INTEGER NOT NULL,
     weight_capacity_grams REAL DEFAULT 20000.0,
-    inventory_capacity INTEGER DEFAULT 20,
+    volume_capacity INTEGER DEFAULT 20,
     current_weight_grams REAL NULL CHECK (current_weight_grams <= weight_capacity_grams),
-    current_inventory INTEGER NULL CHECK (current_inventory <= inventory_capacity),
+    current_volume INTEGER NULL CHECK (current_volume <= volume_capacity),
     FOREIGN KEY (installed_cabinet_id) REFERENCES cabinets(id)
 );
 
@@ -44,10 +44,10 @@ CREATE TABLE IF NOT EXISTS products (
     price REAL NOT NULL CHECK (price >= 0),
     product_batch TEXT NOT NULL,
     validity DATE NOT NULL,
-    weight_gram_unit REAL NOT NULL CHECK (weight_gram_unit > 0),
+    product_weight REAL NOT NULL CHECK (product_weight > 0),
     cabinet_shelf_id INTEGER NOT NULL, -- it is the weight scale itselfs
-    total_inventory_amount INTEGER NOT NULL CHECK (total_inventory_amount >= 0),
-    reserved_inventory_amount INTEGER DEFAULT 0 CHECK (reserved_inventory_amount >= 0),
+    product_volume INTEGER NOT NULL CHECK (product_volume >= 0),
+    reserved_volume_amount INTEGER DEFAULT 0 CHECK (reserved_volume_amount >= 0),
     avaliable BOOLEAN NOT NULL DEFAULT 0 CHECK (avaliable IN(0, 1)) --if product is avaliable or suspended
     FOREIGN KEY (cabinet_shelf_id) REFERENCES shelfs(id)
 );

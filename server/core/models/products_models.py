@@ -1,0 +1,113 @@
+from server.database import hardware_dao as hard_dao
+from server.database import inventory_dao as inv_dao
+
+#region PRODUCTS CHECK
+def shelf_capacity_calculate(total_weight_cap,current_weight,delta_weight,total_volume_cap,current_volume,delta_volume,command) -> tuple:
+    #CALCULATE SHELF CAPACITY WEIGHT AND VOLUME
+    if command == "increase":
+        new_weight = current_weight + (delta_weight*delta_volume)
+        new_volume = current_volume + delta_volume
+
+    elif command == "decrease":
+        new_weight = current_weight - (delta_weight*delta_volume)
+        new_volume = current_volume - delta_volume
+
+    else:
+        print(f"\n[BANCO DE DADOS - CHECAGEM DE PRATELEIRA] COMANDO INVÁLIDO. OPERAÇÃO CANCELADA\n")
+        return False, None, None
+    #END CHECK
+    
+    #CHECK NEW SHELF WEIGHT AND VOLUME 
+    if new_weight > total_weight_cap or new_weight < 0:
+        print(f"\n[BANCO DE DADOS CHECAGEM DE PRATELEIRA] ERRO NO CÁLCULO DE PESO. OPERAÇÃO CANCELADA\n")
+        return False, None, None
+
+    if new_volume > total_volume_cap or new_volume < 0:
+        print(f"\n[BANCO DE DADOS CHECAGEM DE PRATELEIRA] ERRO NO CÁLCULO DE VOLUME. OPERAÇÃO CANCELADA\n")
+        return False, None, None
+    #END CHECK
+    
+    return True, new_weight, new_volume
+
+
+def unpack_shelf_info(shelf_info: Dict):
+    shelf_weight_cap = shelf_info["weight_capacity_grams"]
+    shelf_volume_cap = shelf_info["volume_capacity"]
+
+    shelf_current_weight = shelf_info["current_weight_grams"]
+    shelf_current_volume = shelf_info["current_volume"]
+
+    return shelf_weight_cap, shelf_volume_cap, shelf_current_weight, shelf_current_volume
+#endregion
+
+
+#region PRODUCTS ACTIONS
+def new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: str, product_weight: float, cabinet_shelf_id: int, product_volume: int) -> bool:
+    shelf_info = hard_dao.search_shelf_id(cabinet_shelf_id)
+
+    if not shelf_info:
+        return False
+
+    shelf_weight_cap, shelf_volume_cap, shelf_current_weight, shelf_current_volume = unpack_shelf_info(shelf_info)
+
+    new_cap_valid, shelf_new_weight, shelf_new_volume = shelf_capacity_calculate(shelf_weight_cap,shelf_current_weight,product_weight,shelf_volume_cap,shelf_current_volume,product_volume,"increase")
+
+    if not new_cap_valid:
+        return False
+
+    result = inv_dao.add_new_product(bar_code, product_name, price, product_batch, validity, product_weight, cabinet_shelf_id, product_volume, shelf_new_weight, shelf_new_volume)
+
+    return result
+
+
+def change_product_info(product_info,selected_column,new_value,command=None):
+    shelf_id = product_info["cabinet_shelf_id"]
+    product_id = product_info["id"]
+
+    if command:
+        shelf_info = hard_dao.search_shelf_id(shelf_id)
+        product_weight = product_info["product_weight"]
+        product_delta_volume = product_info["product_volume"]
+
+        if not shelf_info:
+            return False
+
+        shelf_weight_cap, shelf_volume_cap, shelf_current_weight, shelf_current_volume = unpack_shelf_info(shelf_info)
+    
+        new_cap_valid, shelf_new_weight, shelf_new_volume = shelf_capacity_calculate(shelf_weight_cap,shelf_current_weight,product_weight,shelf_volume_cap,shelf_current_volume,product_delta_volume,command)
+
+        if not new_cap_valid:
+            return False
+        
+        result = inv_dao.change_product_info(product_id,selected_column,new_value,command,shelf_id,shelf_new_weight,shelf_new_volume)
+
+
+def checkout_cart(cart: list):#cart ALWAYS MUST TO BE A LIST OF DICT [{"id":19,"product_volume":3,"product)weight":5.0,"cabinet_shelf_id":5,"new_shelf_weight":15.0,"new_shelf_volume":15}]
+    final_cart = []
+
+    for prod in cart:
+        shelf_id = prod["cabinet_shelf_id"]
+        shelf_info = hard_dao.search_shelf_id(shelf_id)
+        product_weight = prod["product_weight"]
+        product_volume = prod["product_volume"]
+
+        shelf_weight_cap, shelf_volume_cap, shelf_current_weight, shelf_current_volume = unpack_shelf_info(shelf_info)
+
+        new_cap_valid, shelf_new_weight, shelf_new_volume = shelf_capacity_calculate(shelf_weight_cap,shelf_current_weight,product_weight,shelf_volume_cap,shelf_current_volume,product_volume,"decrease")
+
+        if not new_cap_valid:
+            return False
+        
+        product_order = {
+            "id":prod["id"],
+            "product_volume":prod["product_volume"],
+            "cabinet_shelf_id":prod["cabinet_shelf_id"],
+            "new_shelf_weight":shelf_new_weight,
+            "new_shelf_volume":shelf_new_volume,
+        }
+
+        final_cart.append(product_order)
+    
+    result = inv_dao.checkout_cart(final_cart)
+
+    return result

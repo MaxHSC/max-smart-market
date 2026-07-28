@@ -125,9 +125,9 @@ def list_all_installed_shelf() -> List[Dict]:
         SELECT id,
         installed_cabinet_id,
         weight_capacity_grams,
-        inventory_capacity,
+        volume_capacity,
         current_weight_grams,
-        current_inventory
+        current_volume
         FROM shelfs
     '''
 
@@ -148,9 +148,9 @@ def list_all_installed_shelf() -> List[Dict]:
                     "id":shelf[0],
                     "installed_cabinet_id":shelf[1],
                     "weight_capacity_grams":shelf[2],
-                    "inventory_capacity":shelf[3],
+                    "volume_capacity":shelf[3],
                     "current_weight_grams":shelf[4],
-                    "current_inventory":shelf[5],
+                    "current_volume":shelf[5],
                 }
             )
         
@@ -171,9 +171,9 @@ def search_shelf_id(shelf_id: int) -> Dict:
         SELECT id,
         installed_cabinet_id,
         weight_capacity_grams,
-        inventory_capacity,
+        volume_capacity,
         current_weight_grams,
-        current_inventory
+        current_volume
         FROM shelfs
         WHERE id = ?
     '''
@@ -193,9 +193,9 @@ def search_shelf_id(shelf_id: int) -> Dict:
             "id": shelf[0],
             "installed_cabinet_id": shelf[1],
             "weight_capacity_grams": shelf[2],
-            "inventory_capacity": shelf[3],
+            "volume_capacity": shelf[3],
             "current_weight_grams": shelf[4],
-            "current_inventory": shelf[5],
+            "current_volume": shelf[5],
         }
 
         return shelf_info
@@ -243,15 +243,15 @@ def search_shelf_id(shelf_id: int) -> Dict:
 #         print(f"[BANCO DE DADOS TESTE] ID [{i["id"]}]")
 #         print(f"[BANCO DE DADOS TESTE] INSTALADO NO ARMÁRIO ID [{i["installed_cabinet_id"]}]")
 #         print(f"[BANCO DE DADOS TESTE] CAPACIDADE TOTAL DE PESO [{i["weight_capacity_grams"]}]")
-#         print(f"[BANCO DE DADOS TESTE] CAPACIDADE TOTAL DE VOLUMES [{i["inventory_capacity"]}]")
+#         print(f"[BANCO DE DADOS TESTE] CAPACIDADE TOTAL DE VOLUMES [{i["volume_capacity"]}]")
 #         print(f"[BANCO DE DADOS TESTE] PESO ATUAL [{i["current_weight_grams"]}]")
-#         print(f"[BANCO DE DADOS TESTE] VOLUME ATUAL [{i["current_inventory"]}]\n")
+#         print(f"[BANCO DE DADOS TESTE] VOLUME ATUAL [{i["current_volume"]}]\n")
         
 #     pass
 
     # "id":shelf[0],
     # "installed_cabinet_id":shelf[1],
     # "weight_capacity_grams":shelf[2],
-    # "inventory_capacity":shelf[3],
+    # "volume_capacity":shelf[3],
     # "current_weight_grams":shelf[4],
-    # "current_inventory":shelf[5],
+    # "current_volume":shelf[5],
