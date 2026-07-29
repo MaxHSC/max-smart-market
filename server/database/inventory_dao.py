@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 from server.database.connection import connect_database, start_database
 from datetime import datetime
 
-#region ONLY READ DATABASE
+#region ONLY READ
 def get_shelf_id(product_id: int, cursor) -> int:
     sql = '''
         SELECT id, cabinet_shelf_id
@@ -23,6 +23,40 @@ def get_shelf_id(product_id: int, cursor) -> int:
     except sqlite3.Error as error:
         print(f"\n[BANCO DE DADOS] ERRO NA BUSCA DO PRODUTO: [{error}]\n")
         return False
+
+
+def get_product_info(product_id: int):
+    sql = '''
+        SELECT product_volume,
+        product_weight,
+        cabinet_shelf_id
+        FROM products
+        WHERE id = ?
+    '''
+
+    start_database()
+    connection = connect_database()
+    cursor = None
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql, (product_id,))
+        list = cursor.fetchone()
+
+        volume = list[0]
+        weight = list[1]
+        shelf = list[2]
+
+        return volume, weight, shelf
+
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO NA BUSCA DO PRODUTO: [{error}]\n")
+        return False, False, False
+
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
     
 
 def search_product_name(product_name: str) -> List[Dict]:
@@ -230,12 +264,29 @@ def change_product_info(product_id,selected_column,new_value,command=None,shelf_
             cursor.close()
         connection.close()
 
-def checkout_cart(cart: list) -> bool: #cart ALWAYS MUST TO BE A LIST OF DICT [{"id":19,"product_volume":3,"cabinet_shelf_id":5,"new_shelf_weight":15.0,"new_shelf_volume":15}]
+def checkout_cart(cart: list) -> bool:
+    '''cart ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
+    [
+        {
+            "id":19,
+            "product_volume":3
+        },
+    ]
+    AND SEND WITH NEW STOCK VALUES AND CART DICT
+    [
+        {"id":19,
+        "new_product_volume":3,
+        "cabinet_shelf_id":5,
+        "new_shelf_weight":15.0,
+        "new_shelf_volume":15
+        },
+    ]
+    '''
+    
     sql_products = '''
         UPDATE products
-        SET product_volume = product_volume - :product_volume
+        SET product_volume = :new_product_volume
         WHERE id = :id
-            AND product_volume >= :product_volume
     '''
 
     sql_shelfs = '''

@@ -226,11 +226,11 @@ def search_shelf_id(shelf_id: int) -> Dict:
 #     pass
 
 # def test_new_shelf():
-#     # for i in range(4):
-#     #     add_new_shelf(1)
+#     for i in range(4):
+#         add_new_shelf(1)
 
-#     # for i in range(5):
-#     #     add_new_shelf(2)
+#     for i in range(5):
+#         add_new_shelf(2)
 
 #     for i in range(6):
 #         add_new_shelf(3)

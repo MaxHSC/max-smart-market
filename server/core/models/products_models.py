@@ -30,12 +30,12 @@ def shelf_capacity_calculate(total_weight_cap,current_weight,delta_weight,total_
     return True, new_weight, new_volume
 
 
-def unpack_shelf_info(shelf_info: Dict):
+def unpack_shelf_info(shelf_info: dict):
     shelf_weight_cap = shelf_info["weight_capacity_grams"]
     shelf_volume_cap = shelf_info["volume_capacity"]
 
-    shelf_current_weight = shelf_info["current_weight_grams"]
-    shelf_current_volume = shelf_info["current_volume"]
+    shelf_current_weight = shelf_info["current_weight_grams"] if shelf_info["current_weight_grams"] is not None else 0
+    shelf_current_volume = shelf_info["current_volume"] if shelf_info["current_volume"] is not None else 0
 
     return shelf_weight_cap, shelf_volume_cap, shelf_current_weight, shelf_current_volume
 #endregion
@@ -82,14 +82,34 @@ def change_product_info(product_info,selected_column,new_value,command=None):
         result = inv_dao.change_product_info(product_id,selected_column,new_value,command,shelf_id,shelf_new_weight,shelf_new_volume)
 
 
-def checkout_cart(cart: list):#cart ALWAYS MUST TO BE A LIST OF DICT [{"id":19,"product_volume":3,"product)weight":5.0,"cabinet_shelf_id":5,"new_shelf_weight":15.0,"new_shelf_volume":15}]
+def checkout_cart(cart: list):
+    '''cart ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
+    [
+        {
+            "id":19,
+            "product_volume":3
+        },
+    ]
+    AND SEND WITH NEW STOCK VALUES AND CART DICT
+    [
+        {"id":19,
+        "new_product_volume":3,
+        "cabinet_shelf_id":5,
+        "new_shelf_weight":15.0,
+        "new_shelf_volume":15
+        },
+    ]
+    '''
     final_cart = []
 
     for prod in cart:
-        shelf_id = prod["cabinet_shelf_id"]
-        shelf_info = hard_dao.search_shelf_id(shelf_id)
-        product_weight = prod["product_weight"]
+        product_current_volume, product_weight, shelf_id = inv_dao.get_product_info(prod["id"])
+        
+        if not product_current_volume:
+            return False
+
         product_volume = prod["product_volume"]
+        shelf_info = hard_dao.search_shelf_id(shelf_id)
 
         shelf_weight_cap, shelf_volume_cap, shelf_current_weight, shelf_current_volume = unpack_shelf_info(shelf_info)
 
@@ -97,17 +117,68 @@ def checkout_cart(cart: list):#cart ALWAYS MUST TO BE A LIST OF DICT [{"id":19,"
 
         if not new_cap_valid:
             return False
+
+        if product_current_volume < prod["product_volume"]:
+            print(f"\n[BANCO DE DADOS - CHECAGEM DE PRODUTO] QUANTIDADE DO PEDIDO INFERIO AO DISPONÍVEL EM ESTOQUE.\n")
+            return False
+
+        product_new_volume = product_current_volume - prod["product_volume"]
         
         product_order = {
             "id":prod["id"],
-            "product_volume":prod["product_volume"],
-            "cabinet_shelf_id":prod["cabinet_shelf_id"],
+            "new_product_volume":product_new_volume,
+            "cabinet_shelf_id":shelf_id,
             "new_shelf_weight":shelf_new_weight,
             "new_shelf_volume":shelf_new_volume,
         }
 
         final_cart.append(product_order)
+
+    # print(product_order)
     
     result = inv_dao.checkout_cart(final_cart)
 
     return result
+
+
+
+
+
+
+
+
+
+#region TESTS AREA
+def test_check_order():
+    cart = [
+        {
+            "id":8,
+            "product_volume":1,
+            "cabinet_shelf_id":5,
+        }
+    ]
+
+    result = checkout_cart(cart)
+
+    print(result)
+
+    pass
+
+# def test_new_product():
+#     from server.core.models.products_list_test import products_list as lists
+
+#     cart_list = lists[-1]
+#     print(cart_list)
+
+#     # print(cart)
+#     # cart_list = list(cart.values())
+
+#     result = new_product(*cart_list.values())
+
+#     print(result)
+
+
+
+
+
+#endregion

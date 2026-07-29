@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS products (
     cabinet_shelf_id INTEGER NOT NULL, -- it is the weight scale itselfs
     product_volume INTEGER NOT NULL CHECK (product_volume >= 0),
     reserved_volume_amount INTEGER DEFAULT 0 CHECK (reserved_volume_amount >= 0),
-    avaliable BOOLEAN NOT NULL DEFAULT 0 CHECK (avaliable IN(0, 1)) --if product is avaliable or suspended
+    avaliable BOOLEAN NOT NULL DEFAULT 0 CHECK (avaliable IN(0, 1)), --if product is avaliable or suspended
     FOREIGN KEY (cabinet_shelf_id) REFERENCES shelfs(id)
 );
 
