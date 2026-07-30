@@ -264,7 +264,8 @@ def change_product_info(product_id,selected_column,new_value,command=None,shelf_
             cursor.close()
         connection.close()
 
-def checkout_cart(cart: list) -> bool:
+
+def checkout_cart(cart: list, shelfs_new_values: list) -> bool:
     '''cart ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
     [
         {
@@ -303,7 +304,7 @@ def checkout_cart(cart: list) -> bool:
     try:
         cursor = connection.cursor()
 
-        cursor.executemany(sql_shelfs, cart)
+        cursor.executemany(sql_shelfs, shelfs_new_values)
 
         for prod in cart:
             cursor.execute(sql_products, prod)
