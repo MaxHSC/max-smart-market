@@ -40,21 +40,18 @@ def change_product_info(product_id,selected_column,new_value,command=None,produc
         if selected_column == "price" and new_value < 0:
             raise ValueError("\n[BANCO DE DADOS - INVENTÁRIO] PREÇO INVÁLIDO.")
 
-        inv.change_product_info(product_id,selected_column,new_value,command,product_weight)
+        result = prod_mod.change_product_info(product_id,selected_column,new_value,command,product_weight)
 
     except ValueError:
         return False
     
-    return True
-
-def search_product_name(product_name) -> list:
-    return inv.search_product_name(product_name)
+    return result
 
 def list_all_products() -> list:
-    return inv.list_all_products()
+    return prod_mod.get_products_list()
 
 def checkout_cart(cart: list) -> bool:
-    return inv.checkout_cart(cart)
+    return prod_mod.checkout_cart(cart)
 
 
 

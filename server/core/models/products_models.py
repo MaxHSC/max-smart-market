@@ -145,7 +145,7 @@ def new_product(bar_code: int, product_name: str, price: float, product_batch: s
     return result
 
 
-def change_product_info(product_info,selected_column,new_value,command=None):
+def change_product_info(product_info,selected_column,new_value,command=None,product_weight=None) -> bool:
     shelf_id = product_info["cabinet_shelf_id"]
     product_id = product_info["id"]
 
@@ -165,6 +165,8 @@ def change_product_info(product_info,selected_column,new_value,command=None):
             return False
         
         result = inv_dao.change_product_info(product_id,selected_column,new_value,command,shelf_id,shelf_new_weight,shelf_new_volume)
+
+        return result
 
 
 def get_products_list():
