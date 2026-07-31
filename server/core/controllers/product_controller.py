@@ -16,7 +16,7 @@ def new_product(bar_code: int, product_name: str, price: float, product_batch: s
             print(f"\n[BANCO DE DADOS] INFORMAÇÃO DE PRODUTO INVÁLIDA: QUANTIDADE [{product_volume}]\n")
             return False
 
-        result = prod_mod.new_product_shelf_check(bar_code, product_name, price, product_batch, validity, product_weight, cabinet_shelf_id, product_volume)
+        result = prod_mod.new_product(bar_code, product_name, price, product_batch, validity, product_weight, cabinet_shelf_id, product_volume)
 
         return result
 
@@ -24,7 +24,7 @@ def new_product(bar_code: int, product_name: str, price: float, product_batch: s
         return False
 
 
-def change_product_info(product_id,selected_column,new_value,command=None,product_weight=None) -> bool:
+def change_product_info(product_info,selected_column,new_value,command=None,product_weight=None) -> bool:
     try:
         allowed_key_names = [
                 "product_name",
@@ -40,7 +40,7 @@ def change_product_info(product_id,selected_column,new_value,command=None,produc
         if selected_column == "price" and new_value < 0:
             raise ValueError("\n[BANCO DE DADOS - INVENTÁRIO] PREÇO INVÁLIDO.")
 
-        result = prod_mod.change_product_info(product_id,selected_column,new_value,command,product_weight)
+        result = prod_mod.change_product_info(product_info,selected_column,new_value,command,product_weight)
 
     except ValueError:
         return False

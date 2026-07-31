@@ -264,8 +264,49 @@ def change_product_info(product_id,selected_column,new_value,command=None,shelf_
             cursor.close()
         connection.close()
 
+def reserve_cart(cart: list) -> bool:
+    '''
+    AFTER CLIENT CONFIRM THE ORDER, MODELS SEND THE CART TO SUSPEND THE AMOUNT OF PRODUCTS IN CART BY PUT IT INTO ANOTHER TABLE (RESERVED STOCK), OTHERS CLIENTES CAN KEEPING SELECTING THE LEFT PRODUCTS FROM REAL STOCK - RESERVED STOCK
+    '''
+    sql = '''
+        INSERT INTO reservation (
+        user_id,
+        product_id,
+        amount_reserved,
+        expires_time)
+        VALUES (:user_id,:id,:product_volume,:expires_time)
+    '''
+    start_database()
+    connection = connect_database()
+    cursor = None
 
-def checkout_cart(cart: list, shelfs_new_values: list) -> bool:
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql, cart[1:])
+
+        connection.commit()
+        print(f"\n[BANCO DE DADOS RESERVA] COMPRA REGISTRADA. AGUARDANDO CONFIRMAÇÃO DE PAGAMENTO.\n")
+
+        return True
+
+    except sqlite3.IntegrityError:
+            connection.rollback()
+            print(f"\n[BANCO DE DADOS RESERVA] NÚMERO DO PEDIDO INCONSISTENTE.\n")
+            return False
+        
+    except sqlite3.Error as error:
+        connection.rollback()
+        print(f"\n[BANCO DE DADOS] PROBLEMA AO EFETUAR REGISTRO DE COMPRA: {error}\n")
+        return False
+    
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+
+
+
+def conclude_checkout_cart(cart: list, shelfs_new_values: list) -> bool:
     '''cart ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
     [
         {

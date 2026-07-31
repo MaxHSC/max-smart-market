@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from server.database import hardware_dao as hard_dao
 from server.database import inventory_dao as inv_dao
 
@@ -30,7 +32,7 @@ def shelf_capacity_calculate(total_weight_cap,current_weight,delta_weight,total_
     return True, new_weight, new_volume
 
 
-def unpack_shelf_info(shelf_info: dict):
+def unpack_shelf_info(shelf_info: dict) -> tuple:
     shelf_weight_cap = shelf_info["weight_capacity_grams"]
     shelf_volume_cap = shelf_info["volume_capacity"]
 
@@ -39,11 +41,11 @@ def unpack_shelf_info(shelf_info: dict):
 
     return shelf_weight_cap, shelf_volume_cap, shelf_current_weight, shelf_current_volume
 
-def current_values_into_shelf_list(cart: list) -> list[Dict]: #RETURN SHELF LIST WITH CURRENT DATABASE VALUES
+def current_values_into_shelf_list(cart: list) -> list[dict]: #RETURN SHELF LIST WITH CURRENT DATABASE VALUES
     shelfs_new_values_list = []
     shelfs_processed = set() #ONLY FOR THE FOR LOOP AHEAD
 
-    for prod in cart: #GET CURRENT DATABASE SHELFS VALUES
+    for prod in cart[1:]: #GET CURRENT DATABASE SHELFS VALUES
         _, _, shelf_id = inv_dao.get_product_info(prod["id"])
         
         shelf_info = hard_dao.search_shelf_id(shelf_id)
@@ -68,7 +70,7 @@ def current_values_into_shelf_list(cart: list) -> list[Dict]: #RETURN SHELF LIST
 
     return shelfs_new_values_list
 
-def get_values_from_shelf_list(shelfs_new_values: list, shelf_id):
+def get_values_from_shelf_list(shelfs_new_values: list, shelf_id) -> tuple:
     for shelf in shelfs_new_values:
         if shelf["cabinet_shelf_id"] == shelf_id:
             shelf_weight_cap = shelf["shelf_weight_cap"]
@@ -80,7 +82,7 @@ def get_values_from_shelf_list(shelfs_new_values: list, shelf_id):
     return shelf_weight_cap, shelf_volume_cap, shelf_current_weight, shelf_current_volume
 
 
-def get_shelfs_new_values(shelfs_new_values: list,shelf_id: int,shelf_new_weight: float,shelf_new_volume: int) -> list[Dict]:
+def get_shelfs_new_values(shelfs_new_values: list,shelf_id: int,shelf_new_weight: float,shelf_new_volume: int) -> list[dict]:
     for shelf in shelfs_new_values:
         if shelf["cabinet_shelf_id"] == shelf_id:
             shelf["new_shelf_weight"] = shelf_new_weight
@@ -89,13 +91,13 @@ def get_shelfs_new_values(shelfs_new_values: list,shelf_id: int,shelf_new_weight
     
     return shelfs_new_values
 
-def calculate_products_and_shelfs_volumes_weight(cart: list, shelfs_new_values_list: list) -> list:
+def calculate_products_and_shelfs_volumes_weight(cart: list, shelfs_new_values_list: list) -> tuple:
     final_cart = []
-    for prod in cart:
+    for prod in cart[1:]:
         product_current_volume, product_weight, shelf_id = inv_dao.get_product_info(prod["id"])
         
         if not product_current_volume:
-            return False
+            return ()
         
         product_volume = prod["product_volume"]
 
@@ -104,13 +106,13 @@ def calculate_products_and_shelfs_volumes_weight(cart: list, shelfs_new_values_l
         check_new_cap_valid, shelf_new_weight, shelf_new_volume = shelf_capacity_calculate(shelf_weight_cap,shelf_current_weight,product_weight,shelf_volume_cap,shelf_current_volume,product_volume,"decrease")
 
         if not check_new_cap_valid:
-            return False
+            return ()
 
         shelfs_new_values_list = get_shelfs_new_values(shelfs_new_values_list,shelf_id,shelf_new_weight,shelf_new_volume)
 
         if product_current_volume < product_volume:
             print(f"\n[BANCO DE DADOS - CHECAGEM DE PRODUTO] QUANTIDADE DO PEDIDO INFERIO AO DISPONÍVEL EM ESTOQUE.\n")
-            return False
+            return ()
 
         product_new_volume = product_current_volume - prod["product_volume"]
         
@@ -145,11 +147,11 @@ def new_product(bar_code: int, product_name: str, price: float, product_batch: s
     return result
 
 
-def change_product_info(product_info,selected_column,new_value,command=None,product_weight=None) -> bool:
-    shelf_id = product_info["cabinet_shelf_id"]
+def change_product_info(product_info,selected_column,new_value,command=None,product_weight=None,shelf_id=None,shelf_new_weight=None,shelf_new_volume=None) -> bool:
     product_id = product_info["id"]
 
     if command:
+        shelf_id = product_info["cabinet_shelf_id"]
         shelf_info = hard_dao.search_shelf_id(shelf_id)
         product_weight = product_info["product_weight"]
         product_delta_volume = product_info["product_volume"]
@@ -164,9 +166,9 @@ def change_product_info(product_info,selected_column,new_value,command=None,prod
         if not new_cap_valid:
             return False
         
-        result = inv_dao.change_product_info(product_id,selected_column,new_value,command,shelf_id,shelf_new_weight,shelf_new_volume)
+    result = inv_dao.change_product_info(product_id,selected_column,new_value,command,shelf_id,shelf_new_weight,shelf_new_volume)
 
-        return result
+    return result
 
 
 def get_products_list():
@@ -179,16 +181,39 @@ def checkout_cart(cart: list):
     shelfs_new_values_list = current_values_into_shelf_list(cart)
 
     final_cart, shelfs_new_values = calculate_products_and_shelfs_volumes_weight(cart,shelfs_new_values_list)
+
+    created_order_time = datetime.now()
+    expires_order_time = created_order_time + timedelta(minutes=cart[0]["expires_time"])
+    expires_order_time_str = expires_order_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    user_id = cart[0]["user_id"]
+    for prod in cart[1:]:
+        prod["user_id"] = user_id
+        prod["expires_time"] = expires_order_time_str
+
+    reserve_cart = inv_dao.reserve_cart(cart)
+
+    if not reserve_cart:
+        return False
+
+    '''
+    ENVIAR PARA CONTROLLER E VIEWS CAMADA DE PAGAMENTO. DEFINIR ESPERA DE EVENTO DE PAGAMENTO, CANCELAMENTO OU TIMEOUT OCORREREM.
+    conclude_checkout_cart SERÁ UM OUTRO MÉTODO QUE SERÁ CHAMADO APÓS A CONFIRMAÇÃO DO EVENTO.
+    '''
     
-    result = inv_dao.checkout_cart(final_cart,shelfs_new_values_list)
+    result = inv_dao.conclude_checkout_cart(final_cart,shelfs_new_values)
 
     return result
 
 '''cart ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
-[
+[   
+    {
+        "user_id":25,
+        "expires_time":5,
+    },
     {
         "id":19,
-        "product_volume":3
+        "product_volume":3,
     },
 ]
 AND SEND WITH NEW STOCK VALUES AND CART DICT
@@ -197,7 +222,8 @@ AND SEND WITH NEW STOCK VALUES AND CART DICT
     "new_product_volume":3,
     "cabinet_shelf_id":5,
     "new_shelf_weight":15.0,
-    "new_shelf_volume":15
+    "new_shelf_volume":15,
+    "client_id":25
     },
 ]
 '''
