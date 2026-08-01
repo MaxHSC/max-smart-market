@@ -220,7 +220,16 @@ def reserve_order(oder: list) -> tuple: #RECEIVE FROM CONTROLLER (FROM VIEWS)
     return order_number, expires_time, user_id #RETURN TO CONTROLLER (TO GATEWAY PAYMENT)
 
 
-def cancel_order(order_number: int, user_id: int) -> bool:
+def expires_order(order_number: int, user_id) -> bool:
+    order_expired = inv_dao.expires_order(order_number)
+
+    return order_expired
+
+
+def cancel_order(order_number: int) -> bool: #RECEIVE FROM CONTROLLER (FROM VIEWS)
+    order_cancelled = inv_dao.cancel_order(order_number)
+
+    return order_cancelled
 
 
 def restore_order(order_number: int, user_id: int) -> list: #RECEIVE FROM CONTROLLER (FROM GATEWAY PAYMENT)
@@ -245,7 +254,7 @@ def checkout_order(order: list, order_number: int): #RECEIVE FROM CONTROLLER (FR
 
     final_order, new_shelfs_values_list = calculate_products_and_shelfs_volumes_weight(order,current_shelf_values_list)
     
-    result = inv_dao.conclude_checkout_order(final_order,new_shelfs_values_list)
+    result = inv_dao.conclude_checkout_order(final_order,new_shelfs_values_list,order_number)
 
     return result, new_shelfs_values_list, order_number #RETURN TO CONTROLLER (TO VIEWS AND TO SCALE AUDIT)
 

@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 
--- 5.Reservation table (mobile app)
-CREATE TABLE IF NOT EXISTS reservation (
+-- 5.Order table (suspend product volume to the order, analitycs)
+CREATE TABLE IF NOT EXISTS orders (
     order_number INTEGER NOT NULL PRIMARY KEY,
     user_id INTEGER NOT NULL,
     product_id INTEGER NOT NULL,
@@ -67,27 +67,28 @@ CREATE TABLE IF NOT EXISTS reservation (
 );
 
 
--- 6.Order table (withdrawal and token session)
-CREATE TABLE IF NOT EXISTS order_kart (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+-- 6.Pick up table (withdrawal and token session, analitycs)
+CREATE TABLE IF NOT EXISTS ready_for_pickups (
+    order_number INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
-    token TEXT NOT NULL, -- 4 digits code (eg.:4829)
+    token TEXT NOT NULL, -- 6 digits code (eg.:999999)
     total_price REAL NOT NULL,
     plataform_order TEXT NOT NULL CHECK (plataform_order IN ('TOTEM_PDV', 'APP_MOBILE')),
-    order_status TEXT DEFAULT 'PENDENTE' CHECK (order_status IN ('PENDENTE', 'EM_COLETA', 'CONCLUIDO', 'CANCELADO')),
+    order_status TEXT DEFAULT 'PENDENTE' CHECK (order_status IN ('PENDENTE', 'EM_COLETA', 'CONCLUIDA', 'CANCELADA')),
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (order_number) REFERENCES orders(order_number)
 );
 
 
 -- 7.Order items table (rel order x purchased)
-CREATE TABLE IF NOT EXISTS order_items (
+CREATE TABLE IF NOT EXISTS orders_for_analitycs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_id INTEGER NOT NULL,
+    order_number INTEGER NOT NULL,
     product_id INTEGER NOT NULL,
     amount_items INTEGER NOT NULL CHECK (amount_items > 0),
     unit_price REAL NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES order_kart(id),
+    FOREIGN KEY (order_number) REFERENCES orders(order_number),
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
@@ -95,12 +96,12 @@ CREATE TABLE IF NOT EXISTS order_items (
 -- 8.Withdrawal weight audit table (scale register per cabinet shelf)
 CREATE TABLE IF NOT EXISTS withdrawal_audit (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_id INTEGER NOT NULL,
+    order_number INTEGER NOT NULL,
     cabinet_shelf_id INTEGER NOT NULL, -- id from the current scale
     previous_weight_grams REAL NULL,
     current_weight_grams REAL NULL,
     expected_weight_grams REAL NOT NULL,
     weight_status TEXT DEFAULT 'PENDENTE' CHECK (weight_status IN ('PENDENTE', 'SUCESSO', 'DIVERGENTE')),
     withdrawal_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES order_kart(id)
+    FOREIGN KEY (order_number) REFERENCES orders(order_number)
 );

@@ -35,7 +35,7 @@ def get_product_info(product_id: int):
     '''
     sql_reserved = '''
         SELECT SUM(amount_reserved)
-        FROM reservation
+        FROM orders
         WHERE product_id = :product_id
             AND reserve_status = "PENDENTE"
         GROUP BY product_id;
@@ -74,7 +74,7 @@ def get_product_info(product_id: int):
 def get_last_order_number():
     sql_reserve = '''
         SELECT MAX(order_number)
-        FROM reservation;
+        FROM orders;
     '''
     start_database()
     connection = connect_database()
@@ -173,7 +173,7 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS IN STOCK A
     sql_reserved = '''
         SELECT product_id,
         SUM(amount_reserved)
-        FROM reservation
+        FROM orders
         WHERE reserve_status = "PENDENTE"
         GROUP BY product_id
     '''
@@ -318,8 +318,75 @@ def change_product_info(product_id,selected_column,new_value,command=None,shelf_
             cursor.close()
         connection.close()
 
-def cancel_order(order_number: int) -> bool:
+
+def expires_order(order_number: int) -> bool:
+    sql_cancel = '''
+        UPDATE orders
+        SET reserve_status = "EXPIRADA"
+        WHERE order_number = ?
+    '''
+
+    start_database()
+    connection = connect_database()
+    cursor = None
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql_cancel, (order_number,))
+
+        connection.commit()
+        print(f"\n[BANCO DE DADOS] PRAZO DE ORDEM DE COMPRA EXPIRADO.\n")
+        return True
     
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        print(f"\n[BANCO DE DADOS] INFORMAÇÃO INVÁLIDADA AO ALTERAR STATUS DA ORDEM DE COMRPA.\n\n")
+        return False
+    
+    except sqlite3.Error as error:
+        connection.rollback()
+        print(f"\n[BANCO DE DADOS] NÃO FOI POSSÍVEL CANCELAR A ORDEM DE COMPRA: {error}")
+        return False
+    
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+
+
+def cancel_order(order_number: int) -> bool:
+    sql_cancel = '''
+        UPDATE orders
+        SET reserve_status = "CANCELADA"
+        WHERE order_number = ?
+    '''
+
+    start_database()
+    connection = connect_database()
+    cursor = None
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql_cancel, (order_number,))
+
+        connection.commit()
+        print(f"\n[BANCO DE DADOS] ORDEM DE COMPRA CANCELADA.\n")
+        return True
+    
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        print(f"\n[BANCO DE DADOS] INFORMAÇÃO INVÁLIDADA AO ALTERAR STATUS DA ORDEM DE COMRPA.\n\n")
+        return False
+    
+    except sqlite3.Error as error:
+        connection.rollback()
+        print(f"\n[BANCO DE DADOS] NÃO FOI POSSÍVEL CANCELAR A ORDEM DE COMPRAS: {error}")
+        return False
+    
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
 
 
 def restore_order(order_number: int) -> list:
@@ -329,8 +396,8 @@ def restore_order(order_number: int) -> list:
     sql_restore = '''
         SELECT product_id,
         amount_reserved
-        FROM reservation
-        WHERE order_number = :order_number;
+        FROM orders
+        WHERE order_number = ?;
     '''
 
     start_database()
@@ -367,7 +434,7 @@ def reserve_order(order: list) -> bool:
     AFTER CLIENT CONFIRM THE ORDER, MODELS SEND THE ORDER TO THE RESERVED TABLE WITH THE ORDER NUMBER THE AMOUNT OF PRODUCTS (ONE LINE FOR EACH PRODUTC) AND CLIENT ID, OTHERS CLIENTES CAN KEEPING SELECTING THE LEFT PRODUCTS FROM THE (REAL STOCK - RESERVED STOCK)
     '''
     sql = '''
-        INSERT INTO reservation (
+        INSERT INTO orders (
         order_number,
         user_id,
         product_id,
@@ -384,18 +451,18 @@ def reserve_order(order: list) -> bool:
         cursor.executemany(sql, cart[1:])
 
         connection.commit()
-        print(f"\n[BANCO DE DADOS RESERVA] PEDIDO REGISTRADO. AGUARDANDO CONFIRMAÇÃO DE PAGAMENTO.\n")
+        print(f"\n[BANCO DE DADOS ORDEM DE COMPRA] PEDIDO REGISTRADO. AGUARDANDO CONFIRMAÇÃO DE PAGAMENTO.\n")
 
         return True
 
     except sqlite3.IntegrityError:
             connection.rollback()
-            print(f"\n[BANCO DE DADOS RESERVA] NÚMERO DO PEDIDO INCONSISTENTE.\n")
+            print(f"\n[BANCO DE DADOS ORDEM DE COMPRA] NÚMERO DO PEDIDO INCONSISTENTE.\n")
             return False
         
     except sqlite3.Error as error:
         connection.rollback()
-        print(f"\n[BANCO DE DADOS] PROBLEMA AO EFETUAR PEDIDO DE COMPRA: {error}\n")
+        print(f"\n[BANCO DE DADOS ORDEM DE COMPRA] PROBLEMA AO EFETUAR PEDIDO DE COMPRA: {error}\n")
         return False
     
     finally:
@@ -405,7 +472,7 @@ def reserve_order(order: list) -> bool:
 
 
 
-def conclude_checkout_order(cart: list, new_shelfs_values: list) -> bool:
+def conclude_checkout_order(cart: list, new_shelfs_values: list, order_number: int) -> bool:
     '''order ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
     [
         {
@@ -436,6 +503,11 @@ def conclude_checkout_order(cart: list, new_shelfs_values: list) -> bool:
             current_volume = :new_shelf_volume
         WHERE id = :cabinet_shelf_id
     '''
+    sql_conclude = '''
+        UPDATE orders
+        SET reserve_status = "CONCLUIDA"
+        WHERE order_number = ?
+    '''
 
     start_database()
     connection = connect_database()
@@ -445,6 +517,8 @@ def conclude_checkout_order(cart: list, new_shelfs_values: list) -> bool:
         cursor = connection.cursor()
 
         cursor.executemany(sql_shelfs, new_shelfs_values)
+
+        cursor.execute(sql_conclude, (order_number,))
 
         for prod in cart:
             cursor.execute(sql_products, prod)
