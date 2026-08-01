@@ -26,12 +26,19 @@ def get_shelf_id(product_id: int, cursor) -> int:
 
 
 def get_product_info(product_id: int):
-    sql = '''
+    sql_product = '''
         SELECT product_volume,
         product_weight,
         cabinet_shelf_id
         FROM products
-        WHERE id = ?
+        WHERE id = ?;
+    '''
+    sql_reserved = '''
+        SELECT SUM(amount_reserved)
+        FROM reservation
+        WHERE product_id = :product_id
+            AND reserve_status = "PENDENTE"
+        GROUP BY product_id;
     '''
 
     start_database()
@@ -40,19 +47,52 @@ def get_product_info(product_id: int):
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql, (product_id,))
+        cursor.execute(sql_product, (product_id,))
         list = cursor.fetchone()
 
-        volume = list[0]
-        weight = list[1]
-        shelf = list[2]
+        stock_product_volume = list[0]
+        product_weight = list[1]
+        shelf_cabinet_id = list[2]
 
-        return volume, weight, shelf
+        cursor.execute(sql_reserved, (product_id,))
+        amount_reserved = cursor.fetchone()
+
+        if not reserved[0]:
+            reserved = 0
+
+        return amount_reserved, stock_product_volume, product_weight, shelf_cabinet_id
 
     except sqlite3.Error as error:
         print(f"\n[BANCO DE DADOS] ERRO NA BUSCA DO PRODUTO: [{error}]\n")
         return False, False, False
 
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+
+def get_last_order_number():
+    sql_reserve = '''
+        SELECT MAX(order_number)
+        FROM reservation;
+    '''
+    start_database()
+    connection = connect_database()
+    cursor = None
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql_reserve)
+        last_order = cursor.fetchone()
+
+        if not last_order[0]:
+            last_order = 0
+        
+        return last_order
+    
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO NA CONSULTA DE ORDENS DE COMPRAS: [{error}]\n")
+        return []
     finally:
         if cursor:
             cursor.close()
@@ -115,8 +155,8 @@ def search_product_name(product_name: str) -> List[Dict]:
             cursor.close()
         connection.close()
 
-def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CLIENT) OR EDIT (MANAGER/STOCKER)
-    sql = '''
+def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS IN STOCK AND THE RESERVED PRODUTCS TO MODELS DO THE MATHS
+    sql_stock = '''
         SELECT id,
         bar_code,
         product_name,
@@ -130,20 +170,28 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
         avaliable
         FROM products
     '''
+    sql_reserved = '''
+        SELECT product_id,
+        SUM(amount_reserved)
+        FROM reservation
+        WHERE reserve_status = "PENDENTE"
+        GROUP BY product_id
+    '''
 
     start_database()
     connection = connect_database()
     cursor = None
 
-    products_list = []
+    products_stock = []
+    products_reserved = {}
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql)
+        cursor.execute(sql_stock)
         lines = cursor.fetchall()
 
         for line in lines:
-            products_list.append(
+            products_stock.append(
                 {
                     "id":line[0],
                     "bar_code":line[1],
@@ -158,8 +206,14 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS TO BUY (CL
                     "avaliable":line[10],
                 }
             )
+
+        cursor.execute(sql_reserved)
+        lines = cursor.fetchall()
+
+        for line in lines:
+            products_reserved[line[0]] = line[1]
         
-        return products_list
+        return products_stock, products_reserved
     
     finally:
         if cursor:
@@ -264,17 +318,62 @@ def change_product_info(product_id,selected_column,new_value,command=None,shelf_
             cursor.close()
         connection.close()
 
-def reserve_cart(cart: list) -> bool:
+def cancel_order(order_number: int) -> bool:
+    
+
+
+def restore_order(order_number: int) -> list:
     '''
-    AFTER CLIENT CONFIRM THE ORDER, MODELS SEND THE CART TO SUSPEND THE AMOUNT OF PRODUCTS IN CART BY PUT IT INTO ANOTHER TABLE (RESERVED STOCK), OTHERS CLIENTES CAN KEEPING SELECTING THE LEFT PRODUCTS FROM REAL STOCK - RESERVED STOCK
+    AFTER GATEWAY CONFIRM THE PAYMENT, IT WILL RETURN THIS CONFIRMATION WITH THE RELATED ORDER NUMBER, MODELS WILL REQUEST FOR THE ORDER RESTAURATION TO PROCEED WITH THE SOTCK REDUCE AND WITHDRAWAL ON CABINETS
+    '''
+    sql_restore = '''
+        SELECT product_id,
+        amount_reserved
+        FROM reservation
+        WHERE order_number = :order_number;
+    '''
+
+    start_database()
+    connection = connect_database()
+    cursor = None
+
+    order_restored = []
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql_restore, (order_number,))
+        lines = cursor.fetchall()
+
+        for line in lines:
+            order_restored.append(
+                {
+                    "product_id":line[0],
+                    "product_volume":line[1],
+                }
+            )
+        
+        return order_restored
+    
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO AO RECUPERAR ORDEM DE COMPRAS: [{error}]\n")
+        return []
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+
+
+def reserve_order(order: list) -> bool:
+    '''
+    AFTER CLIENT CONFIRM THE ORDER, MODELS SEND THE ORDER TO THE RESERVED TABLE WITH THE ORDER NUMBER THE AMOUNT OF PRODUCTS (ONE LINE FOR EACH PRODUTC) AND CLIENT ID, OTHERS CLIENTES CAN KEEPING SELECTING THE LEFT PRODUCTS FROM THE (REAL STOCK - RESERVED STOCK)
     '''
     sql = '''
         INSERT INTO reservation (
+        order_number,
         user_id,
         product_id,
         amount_reserved,
         expires_time)
-        VALUES (:user_id,:id,:product_volume,:expires_time)
+        VALUES (:order_number,:user_id,:product_id,:product_volume,:expires_time)
     '''
     start_database()
     connection = connect_database()
@@ -282,10 +381,10 @@ def reserve_cart(cart: list) -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql, cart[1:])
+        cursor.executemany(sql, cart[1:])
 
         connection.commit()
-        print(f"\n[BANCO DE DADOS RESERVA] COMPRA REGISTRADA. AGUARDANDO CONFIRMAÇÃO DE PAGAMENTO.\n")
+        print(f"\n[BANCO DE DADOS RESERVA] PEDIDO REGISTRADO. AGUARDANDO CONFIRMAÇÃO DE PAGAMENTO.\n")
 
         return True
 
@@ -296,7 +395,7 @@ def reserve_cart(cart: list) -> bool:
         
     except sqlite3.Error as error:
         connection.rollback()
-        print(f"\n[BANCO DE DADOS] PROBLEMA AO EFETUAR REGISTRO DE COMPRA: {error}\n")
+        print(f"\n[BANCO DE DADOS] PROBLEMA AO EFETUAR PEDIDO DE COMPRA: {error}\n")
         return False
     
     finally:
@@ -306,17 +405,17 @@ def reserve_cart(cart: list) -> bool:
 
 
 
-def conclude_checkout_cart(cart: list, shelfs_new_values: list) -> bool:
-    '''cart ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
+def conclude_checkout_order(cart: list, new_shelfs_values: list) -> bool:
+    '''order ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
     [
         {
-            "id":19,
+            "product_id":19,
             "product_volume":3
         },
     ]
-    AND SEND WITH NEW STOCK VALUES AND CART DICT
+    AND SEND WITH NEW STOCK VALUES AND ORDER DICT
     [
-        {"id":19,
+        {"product_id":19,
         "new_product_volume":3,
         "cabinet_shelf_id":5,
         "new_shelf_weight":15.0,
@@ -328,7 +427,7 @@ def conclude_checkout_cart(cart: list, shelfs_new_values: list) -> bool:
     sql_products = '''
         UPDATE products
         SET product_volume = :new_product_volume
-        WHERE id = :id
+        WHERE id = :product_id
     '''
 
     sql_shelfs = '''
@@ -345,7 +444,7 @@ def conclude_checkout_cart(cart: list, shelfs_new_values: list) -> bool:
     try:
         cursor = connection.cursor()
 
-        cursor.executemany(sql_shelfs, shelfs_new_values)
+        cursor.executemany(sql_shelfs, new_shelfs_values)
 
         for prod in cart:
             cursor.execute(sql_products, prod)

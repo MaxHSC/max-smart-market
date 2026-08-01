@@ -55,9 +55,8 @@ CREATE TABLE IF NOT EXISTS products (
 
 -- 5.Reservation table (mobile app)
 CREATE TABLE IF NOT EXISTS reservation (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_number INTEGER NOT NULL PRIMARY KEY,
     user_id INTEGER NOT NULL,
-    order_number INTEGER UNIQUE NOT NULL AUTOINCREMENT,
     product_id INTEGER NOT NULL,
     amount_reserved INTEGER NOT NULL CHECK (amount_reserved > 0),
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
