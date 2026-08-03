@@ -1,5 +1,5 @@
 from server.database import inventory_dao as inv
-from server.core.models import products_models as prod_mod
+from server.core.models import products_models as prod_mod, payment_gateway_simulator as pay_gat
 
 
 def new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: str, product_weight: float, cabinet_shelf_id: int, product_volume: int) -> bool:
@@ -48,18 +48,20 @@ def change_product_info(product_info,selected_column,new_value,command=None,prod
     return result
 
 def list_all_products() -> list:
-    return prod_mod.get_products_list()
+    available_products_list = prod_mod.get_products_list()
 
-def checkout_cart(cart: list) -> bool:
-    return prod_mod.checkout_cart(cart)
+    return available_products_list
 
+def reserve_order(order: list) -> tuple:
+    order_number, expires_time, user_id, total_order_price = prod_mod.reserve_order(order)
 
-
-
-
-
+    return order_number, expires_time, user_id, total_order_price
 
 
+def checkout_order(order: list) -> bool:
+    result, new_shelfs_values_list, order_number, cabinet_id_list = prod_mod.checkout_cart(order)
+    
+    return result, new_shelfs_values_list, order_number, cabinet_id_list
 
 
 #region TEST AREA

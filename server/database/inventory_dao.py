@@ -219,6 +219,43 @@ def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS IN STOCK A
         if cursor:
             cursor.close()
         connection.close()
+
+
+def get_products_prices(products_prices_list: list) -> dict:
+    sql_product = '''
+        SELECT id,
+        price
+        FROM products
+        WHERE id = :product_id
+    '''
+
+    start_database()
+    connection = connect_database()
+    cursor = None
+    products_prices_dict = {}
+
+    try:
+        cursor = connection.cursor()
+        cursor.executemany(sql_product, products_prices_list)
+        lines = cursor.fetchall()
+
+        for line in lines:
+            products_prices_dict[line[0]] = line[1]
+        
+        return products_prices_dict
+    
+    
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO NA BUSCA DO PRODUTO: [{error}]\n")
+        return {}
+
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+
+
+
 #endregion
 
 #region MANAGE DATABASE
@@ -437,10 +474,13 @@ def reserve_order(order: list) -> bool:
         INSERT INTO orders (
         order_number,
         user_id,
+        total_order_price,
         product_id,
+        product_unit_price,
+        product_total_price,
         amount_reserved,
         expires_time)
-        VALUES (:order_number,:user_id,:product_id,:product_volume,:expires_time)
+        VALUES (:order_number,:user_id,:total_order_price,:product_id,:product_unit_price,:product_total_price,:product_volume,:expires_time)
     '''
     start_database()
     connection = connect_database()
@@ -448,7 +488,7 @@ def reserve_order(order: list) -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.executemany(sql, cart[1:])
+        cursor.executemany(sql, order[1:])
 
         connection.commit()
         print(f"\n[BANCO DE DADOS ORDEM DE COMPRA] PEDIDO REGISTRADO. AGUARDANDO CONFIRMAÇÃO DE PAGAMENTO.\n")
@@ -541,5 +581,8 @@ def conclude_checkout_order(cart: list, new_shelfs_values: list, order_number: i
         if cursor:
             cursor.close()
         connection.close()
+
+
+
 
 #endregion

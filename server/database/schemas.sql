@@ -57,7 +57,10 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS orders (
     order_number INTEGER NOT NULL PRIMARY KEY,
     user_id INTEGER NOT NULL,
+    total_order_price REAL NOT NULL CHECK (total_order_price >= 0),
     product_id INTEGER NOT NULL,
+    product_unit_price REAL NOT NULL CHECK (product_unit_price >= 0),
+    product_total_price REAL NOT NULL CHECK (product_total_price >= 0),
     amount_reserved INTEGER NOT NULL CHECK (amount_reserved > 0),
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_time DATETIME NOT NULL,

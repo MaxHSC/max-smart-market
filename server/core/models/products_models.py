@@ -43,6 +43,8 @@ def unpack_shelf_info(shelf_info: dict) -> tuple:
 
 def current_shelf_values(order: list) -> list[dict]: #RETURN SHELF LIST WITH CURRENT DATABASE VALUES
     current_shelfs_values_list = []
+    shelf_cabinet_id_list = []
+
     processed_shelfs = set() #ONLY FOR THE NEXT FOR LOOP
 
     for prod in order[1:]: #GET CURRENT DATABASE SHELFS VALUES
@@ -56,6 +58,8 @@ def current_shelf_values(order: list) -> list[dict]: #RETURN SHELF LIST WITH CUR
             current_shelf_weight = shelf_info["current_weight_grams"]
             current_shelf_volume = shelf_info["current_volume"]
 
+            cabinet_id_list.append(shelf_info["installed_cabinet_id"])
+
             current_shelfs_values_list.append(
                 {
                     "cabinet_shelf_id":shelf_id,
@@ -68,7 +72,19 @@ def current_shelf_values(order: list) -> list[dict]: #RETURN SHELF LIST WITH CUR
 
             processed_shelfs.add(shelf_id)
 
-    return current_shelfs_values_list
+    return current_shelfs_values_list, cabinet_id_list
+
+
+def available_products_calc(products_stock: List, products_reserved: dict) -> List[dict]:
+    '''
+    REFATOR THIS FEATURE TO MAKE A INDEX OF ONLY RESERVED PRODUCTS ID LOCATED BY INDEX IN THE INDEX LIST, DOING THE LOOP ITERATES DIRECTLY INTO THESE INDEX LIKE for prod in products_stock[1,4,37,345] THIS TUPLE WILL BE CREATED FROM THE RESERVED PRODUCTS LIST
+    '''
+    for prod in products_stock:
+        if prod["id"] in products_reserved:
+            prod["product_volume"] = prod["product_volume"] - products_reserved[prod["id"]]
+    
+    return products_stock
+
 
 def get_values_from_shelf_list(current_shelf_values_list: list, shelf_id) -> tuple:
     for shelf in current_shelf_values_list:
@@ -127,6 +143,24 @@ def calculate_products_and_shelfs_volumes_weight(order: list, current_shelf_valu
         final_order.append(product_order)
 
     return final_order, new_shelfs_values_list
+
+
+def calculate_prices(order: list) -> list[dict]:
+    order_products_list = []
+    for prod in order[1:]:
+        order_products_list.append(prod["product_id"])
+    
+    products_prices_dict: dict = inv_dao.get_products_prices(order_products_list)
+
+    order[0]["total_order_price"] = sum(products_prices_dict.values())
+
+    for prod in order[1:]:
+        prod["product_unit_price"] = products_prices_dict[prod["product_id"]]
+        prod["product_total_price"] = prod["product_unit_price"] * prod["product_volume"]
+    
+    return
+
+
 #endregion
 
 
@@ -173,17 +207,6 @@ def change_product_info(product_info,selected_column,new_value,command=None,prod
     return result
 
 
-def available_products_calc(products_stock: List, products_reserved: dict) -> List[dict]:
-    '''
-    REFATOR THIS FEATURE TO MAKE A INDEX OF ONLY RESERVED PRODUCTS ID LOCATED BY INDEX IN THE INDEX LIST, DOING THE LOOP ITERATES DIRECTLY INTO THESE INDEX LIKE for prod in products_stock[1,4,37,345] THIS TUPLE WILL BE CREATED FROM THE RESERVED PRODUCTS LIST
-    '''
-    for prod in products_stock:
-        if prod["id"] in products_reserved:
-            prod["product_volume"] = prod["product_volume"] - products_reserved[prod["id"]]
-    
-    return products_stock
-
-
 def get_products_list():
     '''
     THIS FUNCTION GET PRODUCTS IN STOCK AND RESERVED PRODUCTS IF "PENDENTE" AND MAKE THE MATHS WITH products_stock - products_reserved TO RETURN A AVAILABLE PRODUCTS LIST
@@ -196,8 +219,10 @@ def get_products_list():
 
     return available_products_list
 
+
 def reserve_order(oder: list) -> tuple: #RECEIVE FROM CONTROLLER (FROM VIEWS)
     order_number = inv_dao.get_last_order_number() + 1
+    total_order_price = calculate_prices(order)
 
     created_order_time = datetime.now()
     expires_order_time = created_order_time + timedelta(minutes=order[0]["expires_time"])
@@ -206,18 +231,20 @@ def reserve_order(oder: list) -> tuple: #RECEIVE FROM CONTROLLER (FROM VIEWS)
     order[0]["order_number"] = order_number
     user_id = order[0]["user_id"]
     expires_time = order[0]["expires_time"]
+    order[0]["total_order_price"] = total
 
     for prod in order[1:]:
         prod["order_number"] = order_number
         prod["user_id"] = user_id
         prod["expires_time"] = expires_time
+        
     
     confirm_reservation = inv_dao.reserve_order(order) #SEND TO INVENTORY DAO (RESERVATION TABLE)
 
     if not confirm_reservation:
-        return False, False
+        return False, False, False
     
-    return order_number, expires_time, user_id #RETURN TO CONTROLLER (TO GATEWAY PAYMENT)
+    return order_number, expires_time, user_id, total_order_price #RETURN TO CONTROLLER (TO GATEWAY PAYMENT)
 
 
 def expires_order(order_number: int, user_id) -> bool:
@@ -249,14 +276,17 @@ def restore_order(order_number: int, user_id: int) -> list: #RECEIVE FROM CONTRO
     return order, order_number #RETURN TO CONTROLLER (TO CHECKOUT ORDER, THIS MODELS)
 
 
-def checkout_order(order: list, order_number: int): #RECEIVE FROM CONTROLLER (FROM THIS MODELS AFTER ORDER RESTAURATION)
-    current_shelf_values_list = current_shelf_values(order) 
+def checkout_order(order: list, order_number: int) -> tuple: #RECEIVE FROM CONTROLLER (FROM THIS MODELS AFTER ORDER RESTAURATION)
+    current_shelf_values_list, cabinet_id_list = current_shelf_values(order) 
 
     final_order, new_shelfs_values_list = calculate_products_and_shelfs_volumes_weight(order,current_shelf_values_list)
     
     result = inv_dao.conclude_checkout_order(final_order,new_shelfs_values_list,order_number)
 
-    return result, new_shelfs_values_list, order_number #RETURN TO CONTROLLER (TO VIEWS AND TO SCALE AUDIT)
+    return result, new_shelfs_values_list, order_number, cabinet_id_list #RETURN TO CONTROLLER (TO GENERATE TOKEN AND SEND TOKEN UNLOCK TO CABINETS AND TO WITHDRAWAL AUDIT)
+
+
+
 
 '''cart ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
 [   

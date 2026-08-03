@@ -211,6 +211,12 @@ def search_shelf_id(shelf_id: int) -> Dict:
         connection.close()
 
 
+def unlock_cabinet_token(order_token: str, cabinet_id_list):
+    sql_cabinet = '''
+        UPDATE 
+    '''
+
+
 # def test_new_cabinet():
 #     for i in range(3):
 #         add_new_cabinet()
