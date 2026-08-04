@@ -1,16 +1,12 @@
-class POSDevice():
-    def __init__(self):
-        self.payment_value = 0.0
-        self.payment_status = False
-        self.payment_dict = {}
-    
-    def request_payment_order(self,order_number,total_order_price) -> dict:
-        self.payment_dict.setdefault(order_number,{}) = {"total_order_price":total_order_price}
+payment_dict = {}
 
-        return self.payment_dict
-    
-    def confirm_payment(self,order_number,total_order_price,inserted_value) -> tuple:
-        if inserted_value != total_order_price:
-            return False, order_number
+def request_payment_order(order_number: int,total_order_price: float) -> dict:
+    payment_dict.setdefault(order_number,{})["total_order_price"] = total_order_price
 
-        return True
+    return payment_dict
+
+def confirm_payment(order_number,total_order_price,inserted_value) -> tuple:
+    if inserted_value != total_order_price:
+        return False, order_number
+
+    return True, order_number

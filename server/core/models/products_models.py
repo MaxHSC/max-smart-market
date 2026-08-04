@@ -41,14 +41,15 @@ def unpack_shelf_info(shelf_info: dict) -> tuple:
 
     return shelf_weight_cap, shelf_volume_cap, shelf_current_weight, shelf_current_volume
 
-def current_shelf_values(order: list) -> list[dict]: #RETURN SHELF LIST WITH CURRENT DATABASE VALUES
+def current_shelf_values(order: list) -> tuple: #RETURN SHELF LIST WITH CURRENT DATABASE VALUES
     current_shelfs_values_list = []
     shelf_cabinet_id_list = []
+    cabinet_id_list = []
 
     processed_shelfs = set() #ONLY FOR THE NEXT FOR LOOP
 
     for prod in order[1:]: #GET CURRENT DATABASE SHELFS VALUES
-        _, _, shelf_id = inv_dao.get_product_info(prod["id"])
+        _, _, _, shelf_id = inv_dao.get_product_info(prod["id"])
         
         shelf_info = hard_dao.search_shelf_id(shelf_id)
 
@@ -75,7 +76,7 @@ def current_shelf_values(order: list) -> list[dict]: #RETURN SHELF LIST WITH CUR
     return current_shelfs_values_list, cabinet_id_list
 
 
-def available_products_calc(products_stock: List, products_reserved: dict) -> List[dict]:
+def available_products_calc(products_stock: list, products_reserved: dict) -> list[dict]:
     '''
     REFATOR THIS FEATURE TO MAKE A INDEX OF ONLY RESERVED PRODUCTS ID LOCATED BY INDEX IN THE INDEX LIST, DOING THE LOOP ITERATES DIRECTLY INTO THESE INDEX LIKE for prod in products_stock[1,4,37,345] THIS TUPLE WILL BE CREATED FROM THE RESERVED PRODUCTS LIST
     '''
@@ -145,7 +146,7 @@ def calculate_products_and_shelfs_volumes_weight(order: list, current_shelf_valu
     return final_order, new_shelfs_values_list
 
 
-def calculate_prices(order: list) -> list[dict]:
+def calculate_prices(order: list) -> None:
     order_products_list = []
     for prod in order[1:]:
         order_products_list.append(prod["product_id"])
@@ -220,7 +221,7 @@ def get_products_list():
     return available_products_list
 
 
-def reserve_order(oder: list) -> tuple: #RECEIVE FROM CONTROLLER (FROM VIEWS)
+def reserve_order(order: list) -> tuple: #RECEIVE FROM CONTROLLER (FROM VIEWS)
     order_number = inv_dao.get_last_order_number() + 1
     total_order_price = calculate_prices(order)
 
@@ -231,7 +232,7 @@ def reserve_order(oder: list) -> tuple: #RECEIVE FROM CONTROLLER (FROM VIEWS)
     order[0]["order_number"] = order_number
     user_id = order[0]["user_id"]
     expires_time = order[0]["expires_time"]
-    order[0]["total_order_price"] = total
+    order[0]["total_order_price"] = total_order_price
 
     for prod in order[1:]:
         prod["order_number"] = order_number
@@ -259,11 +260,11 @@ def cancel_order(order_number: int) -> bool: #RECEIVE FROM CONTROLLER (FROM VIEW
     return order_cancelled
 
 
-def restore_order(order_number: int, user_id: int) -> list: #RECEIVE FROM CONTROLLER (FROM GATEWAY PAYMENT)
+def restore_order(order_number: int, user_id: int) -> tuple: #RECEIVE FROM CONTROLLER (FROM GATEWAY PAYMENT)
     order = inv_dao.restore_order(order_number)
 
     if not order:
-        return []
+        return ()
     
     order.insert(
         0,

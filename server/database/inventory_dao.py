@@ -57,21 +57,21 @@ def get_product_info(product_id: int):
         cursor.execute(sql_reserved, (product_id,))
         amount_reserved = cursor.fetchone()
 
-        if not reserved[0]:
-            reserved = 0
+        if not amount_reserved[0]:
+            amount_reserved = 0
 
         return amount_reserved, stock_product_volume, product_weight, shelf_cabinet_id
 
     except sqlite3.Error as error:
         print(f"\n[BANCO DE DADOS] ERRO NA BUSCA DO PRODUTO: [{error}]\n")
-        return False, False, False
+        return False, False, False, False
 
     finally:
         if cursor:
             cursor.close()
         connection.close()
 
-def get_last_order_number():
+def get_last_order_number() -> int:
     sql_reserve = '''
         SELECT MAX(order_number)
         FROM orders;
@@ -92,7 +92,7 @@ def get_last_order_number():
     
     except sqlite3.Error as error:
         print(f"\n[BANCO DE DADOS] ERRO NA CONSULTA DE ORDENS DE COMPRAS: [{error}]\n")
-        return []
+        return 0
     finally:
         if cursor:
             cursor.close()
@@ -155,7 +155,7 @@ def search_product_name(product_name: str) -> List[Dict]:
             cursor.close()
         connection.close()
 
-def list_all_products() -> List[Dict]: #RETURN LIST WITH ALL PRODUCTS IN STOCK AND THE RESERVED PRODUTCS TO MODELS DO THE MATHS
+def list_all_products() -> tuple: #RETURN LIST WITH ALL PRODUCTS IN STOCK AND THE RESERVED PRODUTCS TO MODELS DO THE MATHS
     sql_stock = '''
         SELECT id,
         bar_code,
