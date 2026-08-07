@@ -8,12 +8,13 @@ import sqlite3
 from typing import Dict, List, Optional
 from server.database.connection import connect_database, start_database
 
-def add_new_cabinet() -> bool:
+def add_new_cabinet(cabinet_info: dict) -> bool:
     sql = '''
         INSERT INTO cabinets (
-        current_installed_shelf
+        mac_address,
+        net_port
         )
-        VALUES (0)
+        VALUES (:mac_address,:net_port)
     '''
 
     start_database()
@@ -22,12 +23,18 @@ def add_new_cabinet() -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql)
+        cursor.execute(sql, cabinet_info)
         connection.commit()
         print(f"\n[BANCO DE DADOS] NOVO ARMÁRIO INTELIGENTE VINCULADO COM SUCESSO.\n")
         return True
-        
+    
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        print(f"\n[BANCO DE DADOS - HARDWARE] JÁ EXISTE UM ARMÁRIO INSTALADO COM O MESMO MAC.")
+        return False
+
     except sqlite3.Error as error:
+        connection.rollback()
         print(f"\n[BANCO DE DADOS] PROBLEMA AO VINCULAR NOVO ARMÁRIO INTELIGENTE: [{error}]")
         return False
 
@@ -40,7 +47,9 @@ def list_all_cabinets() -> List[Dict]:
     sql = '''
         SELECT id,
         shelf_capacity,
-        current_installed_shelf
+        current_installed_shelf,
+        mac_address,
+        net_port
         FROM cabinets
     '''
 
@@ -61,6 +70,8 @@ def list_all_cabinets() -> List[Dict]:
                     "id":cabinet[0],
                     "shelf_capacity": cabinet[1],
                     "current_installed_shelf":cabinet[2],
+                    "mac_address":cabinet[3],
+                    "net_port":cabinet[4],
                 }
             )
         return cabinet_list
@@ -76,12 +87,14 @@ def list_all_cabinets() -> List[Dict]:
         connection.close()
 
 
-def add_new_shelf(installed_cabinet_id: int) -> bool:
+def add_new_shelf(shelf_info: dict, cabinet_id: int) -> bool:
     sql_create_shelf = '''
         INSERT INTO shelfs (
-        installed_cabinet_id
+        installed_cabinet_id,
+        mac_addres,
+        net_port
         )
-        VALUES (?)
+        VALUES (:installed_cabinet_id,:mac_address,:net_port)
     '''
 
     sql_update_cabinet = '''
@@ -97,17 +110,23 @@ def add_new_shelf(installed_cabinet_id: int) -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql_update_cabinet, (installed_cabinet_id,))
+        cursor.execute(sql_update_cabinet, cabinet_id)
 
         if cursor.rowcount == 0:
             connection.rollback()
-            print(f"\n[BANCO DE DADOS] ARMÁRIO {installed_cabinet_id} ATINGIU A CAPACIDADE MÁXIMA DE PRATELEIRAS INSTALADAS.\n")
+            print(f"\n[BANCO DE DADOS] ARMÁRIO [{cabinet_id}] ATINGIU A CAPACIDADE MÁXIMA DE PRATELEIRAS INSTALADAS.\n")
             return False
         
-        cursor.execute(sql_create_shelf, (installed_cabinet_id,))
+        cursor.execute(sql_create_shelf, shelf_info)
         connection.commit()
-        print(f"\n[BANCO DE DADOS] PRATELEIRA VINCULADA AO ARMÁRIO INTELIGENTE [{installed_cabinet_id}] COM SUCESSO.\n")
+        print(f"\n[BANCO DE DADOS] PRATELEIRA VINCULADA AO ARMÁRIO INTELIGENTE [{cabinet_id}] COM SUCESSO.\n")
         return True
+
+    except sqlite3.IntegrityError:
+        if connection:
+            connection.rollback()
+            print(f"\n[BANCO DE DADOS - HARDWARE] JÁ EXISTE UMA PRATELEIRA INSTALADA COM O MESMO MAC.")
+            return False
 
     except sqlite3.Error as error:
         if connection:
@@ -127,7 +146,9 @@ def list_all_installed_shelf() -> List[Dict]:
         weight_capacity_grams,
         volume_capacity,
         current_weight_grams,
-        current_volume
+        current_volume,
+        mac_address,
+        net_port
         FROM shelfs
     '''
 
@@ -151,6 +172,8 @@ def list_all_installed_shelf() -> List[Dict]:
                     "volume_capacity":shelf[3],
                     "current_weight_grams":shelf[4],
                     "current_volume":shelf[5],
+                    "mac_address":shelf[6],
+                    "net_port":shelf[7],
                 }
             )
         
@@ -173,7 +196,9 @@ def search_shelf_id(shelf_id: int) -> Dict:
         weight_capacity_grams,
         volume_capacity,
         current_weight_grams,
-        current_volume
+        current_volume,
+        mac_address,
+        net_port
         FROM shelfs
         WHERE id = ?
     '''
@@ -196,6 +221,8 @@ def search_shelf_id(shelf_id: int) -> Dict:
             "volume_capacity": shelf[3],
             "current_weight_grams": shelf[4],
             "current_volume": shelf[5],
+            "mac_address":shelf[6],
+            "net_port":shelf[7],
         }
 
         return shelf_info
@@ -209,12 +236,78 @@ def search_shelf_id(shelf_id: int) -> Dict:
         if cursor:
             cursor.close()
         connection.close()
+    
 
-
-def unlock_cabinet_token(order_token: str, cabinet_id_list):
+def remove_cabinet(cabinet_id: int):
     sql_cabinet = '''
-        UPDATE 
+        DELETE FROM cabinets
+        WHERE id = ?
+            AND current_installed_shelf = 0
     '''
+
+    start_database()
+    connection = connect_database()
+    cursor = None
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql_cabinet, (cabinet_id,))
+        connection.commit()
+        print(f"\[BANCO DE DADOS - HARDWARE] ARMÁRIO REMOVIDO COM SUCESSO.")
+        
+        return True
+    
+    except sqlite3.IntegrityError:
+        connection.rollback()
+        print(f"\n[BANCO DE DADOS - HARDWARE] NÃO É POSSÍVEL REMOVER ARMÁRIO COM PRATELEIRAS INSTALADAS. REALIZE A REMOÇÃO DAS PRATELEIRAS PRIMEIRO.")
+
+    except sqlite3.Error as error:
+        connection.rollback()
+        print(f"\n[BANCO DE DADOS - HARDWARE] NÃO FOI POSSIVEL REMOVER O ARMARIO: [{error}]")
+        return False
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+                
+
+def remove_shelf(shelf_id: int, installed_cabinet_id: int, new_cabinet_installed_shelfs: int):
+        sql_shelf = '''
+            DELETE FROM shelfs
+            WHERE id = ?
+                AND current_volume = 0
+        '''
+        sql_cabinet = '''
+            UPDATE cabinets
+            SET current_installed_shelf = ?
+            WHERE id = ?
+        '''
+
+        start_database()
+        connection = connect_database()
+        cursor = None
+
+        try:
+            cursor = connection.cursor()
+            cursor.execute(sql_shelf, (shelf_id,))
+            cursor.execute(sql_cabinet, (installed_cabinet_id, new_cabinet_installed_shelfs))
+            connection.commit()
+            print(f"\[BANCO DE DADOS - HARDWARE] PRATELEIRA REMOVIDA COM SUCESSO.")
+            
+            return True
+        
+        except sqlite3.IntegrityError:
+            connection.rollback()
+            print(f"\n[BANCO DE DADOS - HARDWARE] NÃO É POSSÍVEL REMOVER PRATELEIRA COM PRODUTOS REGISTRADOS. REALIZE A REMOÇÃO DOS PRODUTOS PRIMEIRO.")
+
+        except sqlite3.Error as error:
+            connection.rollback()
+            print(f"\n[BANCO DE DADOS - HARDWARE] NÃO FOI POSSIVEL REMOVER A PRATELEIRA: [{error}]")
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            connection.close()
 
 
 # def test_new_cabinet():

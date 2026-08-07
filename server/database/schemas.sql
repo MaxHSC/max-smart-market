@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS cabinets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     shelf_capacity INTEGER DEFAULT 5,
-    current_installed_shelf INTEGER NULL CHECK (current_installed_shelf <= shelf_capacity)
+    current_installed_shelf INTEGER DEFAULT 0 CHECK (current_installed_shelf <= shelf_capacity),
+    mac_address TEXT UNIQUE NOT NULL,
+    net_port INTEGER NOT NULL
 );
 
 
@@ -32,6 +34,8 @@ CREATE TABLE IF NOT EXISTS shelfs (
     volume_capacity INTEGER DEFAULT 20,
     current_weight_grams REAL NULL CHECK (current_weight_grams <= weight_capacity_grams),
     current_volume INTEGER NULL CHECK (current_volume <= volume_capacity),
+    mac_address TEXT UNIQUE NOT NULL,
+    net_port INTEGER NOT NULL,
     FOREIGN KEY (installed_cabinet_id) REFERENCES cabinets(id)
 );
 
