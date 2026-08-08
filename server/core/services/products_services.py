@@ -2,6 +2,7 @@ from server.core.gateways import payment_gateway_simulator as pay_gat
 from server.core.models import products_models as prod_mod
 from server.core.models import token_generator as token_gen
 from server.core.services import shopping_validators as serv_val
+from server.core.calculations import products_calculations as prod_calc
 
 # TODO: [Refatoração Futura - Arquitetura & Padronização]
     # 1. Avaliar evolução para 'Anemic Service': centralizar aqui a orquestração do ecossistema 
@@ -17,11 +18,13 @@ class ProductsServices():
         self.order = []
 
 
-    def new_product(self,bar_code: int, product_name: str, price: float, product_batch: str, validity: str, product_weight: float, cabinet_shelf_id: int, product_volume: int) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
-        validation_result = serv_val.new_product_validation(price, product_weight, product_volume)
+    def new_product(self,payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
+        validation_result = serv_val.new_product_validation(payload)
 
         if not validation_result:
             return False
+
+        
 
         result = prod_mod.new_product(bar_code, product_name, price, product_batch, validity, product_weight, cabinet_shelf_id, product_volume)
 
