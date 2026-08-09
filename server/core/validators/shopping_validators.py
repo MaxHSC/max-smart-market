@@ -289,7 +289,7 @@ def restore_order_validation(payload: dict) -> bool:
         return False
 #endregion
 
-#region VALIDATION CANCEL
+#region VALIDATE CANCEL
 
 def cancel_order_validation(payload: dict) -> bool:
     sample_payload = {
@@ -324,7 +324,7 @@ def cancel_order_validation(payload: dict) -> bool:
         return False
 #endregion
 
-#region VALIDATION SUSPEND
+#region VALIDATE SUSPEND
 def suspend_product_validation(payload: dict):
     sample_payload = {
                     "header": { 
@@ -358,7 +358,7 @@ def suspend_product_validation(payload: dict):
         return False
 #endregion
 
-#region VALIDATION UNSUSPEND
+#region VALIDATE UNSUSPEND
 def unsuspend_product_validation(payload: dict):
     sample_payload = {
                     "header": { 
@@ -392,7 +392,7 @@ def unsuspend_product_validation(payload: dict):
         return False
 #endregion
 
-#region NO VALIDATION
+#region NO VALIDATIONS
 #DEFS NULAS, EXISTEM APENAS PARA GARANTIR O MAPPING DE action_target
 def get_products_list_validation(payload: dict) -> bool:
     return True
@@ -416,7 +416,7 @@ def action_target(payload: dict):
     }
     try:
         action = payload.get("header", {}).get("action")
-
+        
         if action not in action_mapping:
             raise ValueError("\n[BANCO DE DADOS - PRODUTOS] AÇÃO INVÁLIDA.")
 

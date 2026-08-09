@@ -1,7 +1,7 @@
 from server.core.gateways import payment_gateway_simulator as pay_gat
-from server.core.models import products_models as prod_mod
+from server.core.models import temp_products_models as prod_mod
 from server.core.models import token_generator as token_gen
-from server.core.services import shopping_validators as serv_val
+from server.core.validators import shopping_validators as serv_val
 from server.core.calculations import products_calculations as prod_calc
 
 # TODO: [Refatoração Futura - Arquitetura & Padronização]
@@ -16,16 +16,34 @@ class ProductsServices():
     def __init__(self):
         self.order_number = None
         self.order = []
+        self.action_mapping ={
+            "NEW_PRODUCT": self.new_product,
+            "CHANGE_PRODUCT_INFO": change_product_info_validation,
+            "ORDER_CREATE": reserve_order_validation,
+            "ORDER_CANCEL": cancel_order_validation,
+            "ORDER_RESTORE": restore_order_validation,
+            "SUSPEND_PRODUCT": suspend_product_validation,
+            "UNSUSPEND_PRODUCT": unsuspend_product_validation,
+            "GET_PRODUCTS_LIST": get_products_list_validation,
+            "GET_PRODUCT_INFO": get_product_info_validation,
+        }
 
-
-    def new_product(self,payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
+    def process_payload(self, payload: dict):
         validation_result = serv_val.new_product_validation(payload)
 
         if not validation_result:
             return False
-
         
+        payload_action = payload["header"]["action"]
 
+        action_result = self.action_mapping(payload_action)
+
+        return action_result
+
+
+
+    def new_product(self,payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
+        new_product_object = prod_mod.Product()
         result = prod_mod.new_product(bar_code, product_name, price, product_batch, validity, product_weight, cabinet_shelf_id, product_volume)
 
         return result

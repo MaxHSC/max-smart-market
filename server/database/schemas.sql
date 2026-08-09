@@ -16,13 +16,14 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 
--- 2.Cabinet table (cabinet info and amount of shelf in it)
+-- 2.Cabinet table (cabinet info and quantity of shelf installed ind)
 CREATE TABLE IF NOT EXISTS cabinets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     shelf_capacity INTEGER DEFAULT 5,
     current_installed_shelf INTEGER DEFAULT 0 CHECK (current_installed_shelf <= shelf_capacity),
     mac_address TEXT UNIQUE NOT NULL,
-    net_port INTEGER NOT NULL
+    ip_address TEXT NULL,
+    tcp_port INTEGER NOT NULL
 );
 
 
@@ -35,7 +36,8 @@ CREATE TABLE IF NOT EXISTS shelfs (
     current_weight_grams REAL NULL CHECK (current_weight_grams <= weight_capacity_grams),
     current_volume INTEGER NULL CHECK (current_volume <= volume_capacity),
     mac_address TEXT UNIQUE NOT NULL,
-    net_port INTEGER NOT NULL,
+    ip_address TEXT NULL,
+    tcp_port INTEGER NOT NULL,
     FOREIGN KEY (installed_cabinet_id) REFERENCES cabinets(id)
 );
 
@@ -51,7 +53,7 @@ CREATE TABLE IF NOT EXISTS products (
     product_weight REAL NOT NULL CHECK (product_weight > 0),
     cabinet_shelf_id INTEGER NOT NULL, -- it is the weight scale itselfs
     product_volume INTEGER NOT NULL CHECK (product_volume >= 0),
-    reserved_volume_amount INTEGER DEFAULT 0 CHECK (reserved_volume_amount >= 0),
+    reserved_volume INTEGER DEFAULT 0 CHECK (reserved_volume >= 0),
     avaliable BOOLEAN NOT NULL DEFAULT 0 CHECK (avaliable IN(0, 1)), --if product is avaliable or suspended
     FOREIGN KEY (cabinet_shelf_id) REFERENCES shelfs(id)
 );
@@ -65,7 +67,7 @@ CREATE TABLE IF NOT EXISTS orders (
     product_id INTEGER NOT NULL,
     product_unit_price REAL NOT NULL CHECK (product_unit_price >= 0),
     product_total_price REAL NOT NULL CHECK (product_total_price >= 0),
-    amount_reserved INTEGER NOT NULL CHECK (amount_reserved > 0),
+    reserved_volume INTEGER NOT NULL CHECK (reserved_volume > 0),
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_time DATETIME NOT NULL,
     reserve_status TEXT DEFAULT 'PENDENTE' CHECK (reserve_status IN ('PENDENTE', 'CONCLUIDA', 'EXPIRADA', 'CANCELADA')),
@@ -93,7 +95,7 @@ CREATE TABLE IF NOT EXISTS orders_for_analitycs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_number INTEGER NOT NULL,
     product_id INTEGER NOT NULL,
-    amount_items INTEGER NOT NULL CHECK (amount_items > 0),
+    volume_items INTEGER NOT NULL CHECK (volume_items > 0),
     unit_price REAL NOT NULL,
     FOREIGN KEY (order_number) REFERENCES orders(order_number),
     FOREIGN KEY (product_id) REFERENCES products(id)
