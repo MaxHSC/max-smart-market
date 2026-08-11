@@ -259,7 +259,7 @@ def get_products_prices(products_prices_list: list) -> dict:
 #endregion
 
 #region MANAGE DATABASE
-def add_new_product(bar_code: int, product_name: str, price: float, product_batch: str, validity: str, product_weight: float, cabinet_shelf_id: int, product_volume: int, shelf_new_weight: float, shelf_new_volume: int) -> bool:
+def add_new_product(new_product_dict: dict, update_shelf_dict: dict) -> bool:
     sql_product = '''
         INSERT INTO products (
         bar_code,
@@ -268,17 +268,17 @@ def add_new_product(bar_code: int, product_name: str, price: float, product_batc
         product_batch,
         validity,
         product_weight,
-        cabinet_shelf_id,
+        shelf_id,
         product_volume
         )
-        VALUES (?,?,?,?,?,?,?,?)
+        VALUES (:bar_code,:product_name,:price,:product_batch,:validity,:product_weight,:shelf_id,:product_volume)
     '''
 
     sql_shelf = '''
         UPDATE shelfs
-        SET current_weight_grams = ?,
-            current_volume = ?
-        WHERE id = ?
+        SET current_weight_grams = :current_weight_grams,
+            current_volume = :current_volume
+        WHERE id = :id
     '''
 
     start_database()
@@ -288,8 +288,8 @@ def add_new_product(bar_code: int, product_name: str, price: float, product_batc
     try:
         cursor = connection.cursor()
 
-        cursor.execute(sql_shelf, (shelf_new_weight,shelf_new_volume,cabinet_shelf_id))
-        cursor.execute(sql_product, (bar_code,product_name,price,product_batch,validity,product_weight,cabinet_shelf_id,product_volume))
+        cursor.execute(sql_shelf, update_shelf_dict)
+        cursor.execute(sql_product, new_product_dict)
 
         connection.commit()
         print(f"\n[BANCO DE DADOS] PRODUTO {product_name} ADICIONADO AO CATÁLOGO COM SUCESSO!\n")

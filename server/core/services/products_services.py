@@ -1,9 +1,10 @@
+from server.database import inventory_dao as inv_dao
 from server.core.gateways import payment_gateway_simulator as pay_gat
 from server.core.models import temp_products_models as prod_mod
 from server.core.models import token_generator as token_gen
 from server.core.validators import shopping_validators as serv_val
 from server.core.calculations import products_calculations as prod_calc
-from server.core.services import hardware_services as hard_service
+from server.core.services import hardware_services as hard_services
 
 # TODO: [Refatoração Futura - Arquitetura & Padronização]
     # 1. Avaliar evolução para 'Anemic Service': centralizar aqui a orquestração do ecossistema 
@@ -47,11 +48,39 @@ class ProductsServices():
         return action_result
 
 
+    def attributes_to_dict(self,self_object, fields: list[str]) -> dict:
+        object_dict = {}
+
+        for field in fields:
+            object_dict[field] = getattr(self_object,field)
+        
+        return object_dict
+
     def new_product(self, header:dict, payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
         item: dict = payload["item"]
-        new_product_object = prod_mod.NewProduct(item)
+        self.new_product_object: prod_mod.NewProduct = prod_mod.NewProduct(item)
 
-        #new_product_object agora precisa ser levado para verificar se o shelf existe e se tem capacidade para a quantidade do produto.
+        shelf_object: hard_mod.InstalledShelf = hard_services.get_shelf_info(header,payload=item)
+
+        if shelf_object.current_volume + self.new_product_object.product_volume > shelf_object.volume_capacity or shelf_object.current_volume + self.new_product_object.product_volume <= 0:
+            return False
+        
+        if shelf_object.current_weight_grams + (self.new_product_object.product_weight * self.new_product_object.product_volume) > shelf_object.weight_capacity_grams or shelf_object.current_weight_grams + (self.new_product_object.product_weight * self.new_product_object.product_volume) <= 0:
+            return False
+        
+        shelf_object.current_volume = shelf_object.current_volume + self.new_product_object.product_volume
+        
+        shelf_object.current_weight_grams = shelf_object.current_weight_grams + (self.new_product_object.product_weight * self.new_product_object.product_volume)
+
+        new_product_attributes_list = ["product_name", "bar_code", "price", "product_batch", "validity", "product_weight", "shelf_id", "product_volume"]
+
+        shelf_attributes_list = ["current_weight_grams", "current_volume", "id"]
+
+        new_product_dict: dict = self.attributes_to_dict(self.new_product_object,new_product_attributes_list)
+
+        update_shelf_dict: dict = self.attributes_to_dict(shelf_object, shelf_attributes_list)
+
+        result = inv_dao.add_new_product(new_product_dict, update_shelf_dict)
 
         return result
 

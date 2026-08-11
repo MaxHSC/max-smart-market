@@ -151,13 +151,13 @@ def new_product_validation(payload: dict) -> bool:
                 "product_batch": "BATCH_001",
                 "validity": "2023-12-31",
                 "product_weight": 1.5,
-                "cabinet_shelf_id": 1,
+                "shelf_id": 1,
                 "product_volume": 2.0
             }
         }
     }
 
-    product_keys = ["barc_code","product_name", "price", "product_batch", "validity", "product_weight", "cabinet_shelf_id", "product_volume"]
+    product_keys = ["barc_code","product_name", "price", "product_batch", "validity", "product_weight", "shelf_id", "product_volume"]
 
     try:
         #[1] - VERIFICA SE O PAYLOAD POSSUI A CHAVE "item" E SE É UM DICT NÃO VAZIO
@@ -182,8 +182,8 @@ def new_product_validation(payload: dict) -> bool:
         if  not isinstance(item["product_volume"], (int, float)) or item["product_volume"] < 0:
             raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
 
-        #[3.3] - VERIFICA SE O TIPO DE DADOS EM cabinet_shelf_id É INT E SE É MAIOR QUE 0
-        if not isinstance(item["cabinet_shelf_id"], int) or item["cabinet_shelf_id"] <= 0:
+        #[3.3] - VERIFICA SE O TIPO DE DADOS EM shelf_id É INT E SE É MAIOR QUE 0
+        if not isinstance(item["shelf_id"], int) or item["shelf_id"] <= 0:
             raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
 
         #[3.4] - VERIFICA SE O TIPO DE DADOS EM  validity, product_batch E product_name É STR

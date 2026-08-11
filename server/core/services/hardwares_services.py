@@ -32,7 +32,7 @@ class HardwareServices:
         return action_result
 
 
-    def attributes_to_dict(self,self_object: object, fields: list[str]) -> dict:
+    def attributes_to_dict(self,self_object, fields: list[str]) -> dict:
         object_dict = {}
 
         for field in fields:
@@ -42,7 +42,7 @@ class HardwareServices:
 
 
     def install_new_cabinet(self,header:dict,payload:dict) -> bool:
-        self.new_cabinet_object: object = hard_mod.NewCabinet(payload)
+        self.new_cabinet_object: hard_mod.NewCabinet = hard_mod.NewCabinet(payload)
 
         attributes_fields = ["hardware_mac_address", "hardware_tcp_port"]
 
@@ -53,21 +53,24 @@ class HardwareServices:
         return result
 
 
-    def get_cabinet_info(self,header:dict,payload:dict) -> object:
+    def get_cabinet_info(self,header:dict,payload:dict) -> hard_mod.InstalledCabinet:
         cabinet_info: dict = hard_dao.get_cabinet_info(payload["installed_cabinet_id"])
 
-        self.cabinet_object = hard_mod.InstalledCabinet(cabinet_info)
+        if not cabinet_info:
+            return cabinet_info
+
+        self.cabinet_object: hard_mod.InstalledCabinet = hard_mod.InstalledCabinet(cabinet_info)
 
         return self.cabinet_object
 
 
     def install_new_shelf(self,header:dict,payload:dict) -> bool:
-        cabinet_object = self.get_cabinet_info(header,payload)
+        cabinet_object: hard_mod.InstalledCabinet = self.get_cabinet_info(header,payload)
 
         if cabinet_object.current_installed_shelf + 1 > cabinet_object.shelf_capacity:
             return False
         
-        self.new_shelf_object: object = hard_mod.NewShelf(payload)
+        self.new_shelf_object: hard_mod.NewShelf = hard_mod.NewShelf(payload)
 
         attributes_fields = ["isntalled_cabinet_id","hardware_mac_address", "hardware_tcp_port"]
 
@@ -78,10 +81,13 @@ class HardwareServices:
         return result
 
 
-    def get_shelf_info(self,header:dict,payload:dict) -> dict:
+    def get_shelf_info(self,header:dict,payload:dict) -> hard_mod.InstalledShelf:
         shelf_info: dict = hard_dao.get_shelf_info(payload["shelf_id"])
 
-        self.shelf_object = hard_mod.InstalledShelf(shelf_info)
+        if not shelf_info:
+            return shelf_info
+
+        self.shelf_object: hard_mod.InstalledShelf = hard_mod.InstalledShelf(shelf_info)
 
         return self.shelf_object
         
