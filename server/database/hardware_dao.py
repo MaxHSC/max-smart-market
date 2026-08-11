@@ -12,9 +12,9 @@ def add_new_cabinet(cabinet_info: dict) -> bool:
     sql = '''
         INSERT INTO cabinets (
         mac_address,
-        net_port
+        tcp_port
         )
-        VALUES (:mac_address,:net_port)
+        VALUES (:hardware_mac_address,:hardware_tcp_port)
     '''
 
     start_database()
@@ -25,7 +25,7 @@ def add_new_cabinet(cabinet_info: dict) -> bool:
         cursor = connection.cursor()
         cursor.execute(sql, cabinet_info)
         connection.commit()
-        print(f"\n[BANCO DE DADOS] NOVO ARMÁRIO INTELIGENTE VINCULADO COM SUCESSO.\n")
+        print(f"\n[BANCO DE DADOS - HARDWARE] NOVO ARMÁRIO INTELIGENTE VINCULADO COM SUCESSO.\n")
         return True
     
     except sqlite3.IntegrityError:
@@ -35,7 +35,7 @@ def add_new_cabinet(cabinet_info: dict) -> bool:
 
     except sqlite3.Error as error:
         connection.rollback()
-        print(f"\n[BANCO DE DADOS] PROBLEMA AO VINCULAR NOVO ARMÁRIO INTELIGENTE: [{error}]")
+        print(f"\n[BANCO DE DADOS - HARDWARE] PROBLEMA AO VINCULAR NOVO ARMÁRIO INTELIGENTE: [{error}]")
         return False
 
     finally:
@@ -49,7 +49,7 @@ def list_all_cabinets() -> List[Dict]:
         shelf_capacity,
         current_installed_shelf,
         mac_address,
-        net_port
+        tcp_port
         FROM cabinets
     '''
 
@@ -70,16 +70,61 @@ def list_all_cabinets() -> List[Dict]:
                     "id":cabinet[0],
                     "shelf_capacity": cabinet[1],
                     "current_installed_shelf":cabinet[2],
-                    "mac_address":cabinet[3],
-                    "net_port":cabinet[4],
+                    "hardware_mac_address":cabinet[3],
+                    "hardware_tcp_port":cabinet[4],
                 }
             )
         return cabinet_list
 
     except sqlite3.Error as error:
         connection.rollback()
-        print(f"\n[BANCO DE DADO] ERRO AO BUSCAR ARMÁRIOS: [{error}]")
+        print(f"\n[BANCO DE DADO - HARDWARE] ERRO AO BUSCAR ARMÁRIOS: [{error}]")
         return []
+
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+
+
+def get_cabinet_info(cabinet_id: int) -> dict:
+    sql = '''
+        SELECT id,
+        shelf_capacity,
+        current_installed_shelf,
+        mac_address,
+        ip_address,
+        tcp_port
+        FROM cabinets
+        WHERE id = ?
+    '''
+
+    start_database()
+    connection = connect_database()
+    cursor = None
+
+    cabinet_info = {}
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql, (cabinet_id,))
+        cabinet = cursor.fetchone()
+
+        cabinet_info = {
+            "id": cabinet[0],
+            "shelf_capacity": cabinet[1],
+            "current_installed_shelf": cabinet[2],
+            "hardware_mac_address":cabinet[3],
+            "hardware_ip_address":cabinet[4],
+            "hardware_tcp_port":cabinet[5],
+        }
+
+        return cabinet_info
+    
+    except sqlite3.Error as error:
+        connection.rollback()
+        print(f"\n[BANCO DE DADO] ERRO AO BUSCAR ARMÁRIO: [{error}]")
+        return {}
 
     finally:
         if cursor:
@@ -92,9 +137,9 @@ def add_new_shelf(shelf_info: dict, cabinet_id: int) -> bool:
         INSERT INTO shelfs (
         installed_cabinet_id,
         mac_addres,
-        net_port
+        tcp_port
         )
-        VALUES (:installed_cabinet_id,:mac_address,:net_port)
+        VALUES (:installed_cabinet_id,:hardware_mac_address,:hardware_tcp_port)
     '''
 
     sql_update_cabinet = '''
@@ -114,12 +159,12 @@ def add_new_shelf(shelf_info: dict, cabinet_id: int) -> bool:
 
         if cursor.rowcount == 0:
             connection.rollback()
-            print(f"\n[BANCO DE DADOS] ARMÁRIO [{cabinet_id}] ATINGIU A CAPACIDADE MÁXIMA DE PRATELEIRAS INSTALADAS.\n")
+            print(f"\n[BANCO DE DADOS - HARDWARE] ARMÁRIO [{cabinet_id}] ATINGIU A CAPACIDADE MÁXIMA DE PRATELEIRAS INSTALADAS.\n")
             return False
         
         cursor.execute(sql_create_shelf, shelf_info)
         connection.commit()
-        print(f"\n[BANCO DE DADOS] PRATELEIRA VINCULADA AO ARMÁRIO INTELIGENTE [{cabinet_id}] COM SUCESSO.\n")
+        print(f"\n[BANCO DE DADOS - HARDWARE] PRATELEIRA VINCULADA AO ARMÁRIO INTELIGENTE [{cabinet_id}] COM SUCESSO.\n")
         return True
 
     except sqlite3.IntegrityError:
@@ -131,7 +176,7 @@ def add_new_shelf(shelf_info: dict, cabinet_id: int) -> bool:
     except sqlite3.Error as error:
         if connection:
             connection.rollback()
-        print(f"\n[BANCO DE DADO] NÃO FOI POSSÍVEL VINCULAR PRATELEIRA: [{error}]")
+        print(f"\n[BANCO DE DADO - HARDWARE] NÃO FOI POSSÍVEL VINCULAR PRATELEIRA: [{error}]")
         return False
 
     finally:
@@ -148,7 +193,7 @@ def list_all_installed_shelf() -> List[Dict]:
         current_weight_grams,
         current_volume,
         mac_address,
-        net_port
+        tcp_port
         FROM shelfs
     '''
 
@@ -172,8 +217,8 @@ def list_all_installed_shelf() -> List[Dict]:
                     "volume_capacity":shelf[3],
                     "current_weight_grams":shelf[4],
                     "current_volume":shelf[5],
-                    "mac_address":shelf[6],
-                    "net_port":shelf[7],
+                    "hardware_mac_address":shelf[6],
+                    "hardware_tcp_port":shelf[7],
                 }
             )
         
@@ -181,7 +226,7 @@ def list_all_installed_shelf() -> List[Dict]:
     
     except sqlite3.Error as error:
         connection.rollback()
-        print(f"\n[BANCO DE DADO] ERRO AO BUSCAR PRATELEIRAS: [{error}]")
+        print(f"\n[BANCO DE DADO - HARDWARE] ERRO AO BUSCAR PRATELEIRAS: [{error}]")
         return []
 
     finally:
@@ -189,7 +234,7 @@ def list_all_installed_shelf() -> List[Dict]:
             cursor.close()
         connection.close()
 
-def search_shelf_id(shelf_id: int) -> Dict:
+def get_shelf_info(shelf_id: int) -> Dict:
     sql= '''
         SELECT id,
         installed_cabinet_id,
@@ -198,7 +243,8 @@ def search_shelf_id(shelf_id: int) -> Dict:
         current_weight_grams,
         current_volume,
         mac_address,
-        net_port
+        ip_address,
+        tcp_port
         FROM shelfs
         WHERE id = ?
     '''
@@ -221,8 +267,9 @@ def search_shelf_id(shelf_id: int) -> Dict:
             "volume_capacity": shelf[3],
             "current_weight_grams": shelf[4],
             "current_volume": shelf[5],
-            "mac_address":shelf[6],
-            "net_port":shelf[7],
+            "hardware_mac_address":shelf[6],
+            "hardware_ip_address":cabinet[7],
+            "hardware_tcp_port":shelf[8],
         }
 
         return shelf_info

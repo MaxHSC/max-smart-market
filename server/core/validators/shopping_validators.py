@@ -144,7 +144,8 @@ def new_product_validation(payload: dict) -> bool:
             "timestamp": "1785816136"
         },
         "payload": {
-            "items": {
+            "item": {
+                "bar_code": "1999999999999",
                 "product_name": "New Product",
                 "price": 10.99,
                 "product_batch": "BATCH_001",
@@ -156,16 +157,16 @@ def new_product_validation(payload: dict) -> bool:
         }
     }
 
-    product_keys = ["product_name", "price", "product_batch", "validity", "product_weight", "cabinet_shelf_id", "product_volume"]
+    product_keys = ["barc_code","product_name", "price", "product_batch", "validity", "product_weight", "cabinet_shelf_id", "product_volume"]
 
     try:
-        #[1] - VERIFICA SE O PAYLOAD POSSUI A CHAVE "items" E SE É UM DICT NÃO VAZIO
-        if "items" not in payload["payload"] or not isinstance(payload["payload"]["items"], dict) or len(payload["payload"]["items"]) == 0: 
+        #[1] - VERIFICA SE O PAYLOAD POSSUI A CHAVE "item" E SE É UM DICT NÃO VAZIO
+        if "item" not in payload["payload"] or not isinstance(payload["payload"]["item"], dict) or len(payload["payload"]["item"]) == 0: 
             raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
         
-        item = payload["payload"]["items"]
+        item = payload["payload"]["item"]
         
-        #[2] - VERIFICA SE O DICT items POSSUI TODAS AS CHAVES NECESSÁRIAS E QUE TODAS SÃO CORRETAS, SEM CHAVES EXTRA
+        #[2] - VERIFICA SE O DICT item POSSUI TODAS AS CHAVES NECESSÁRIAS E QUE TODAS SÃO CORRETAS, SEM CHAVES EXTRA
         if set(item) != set(product_keys):
             raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
 
@@ -186,11 +187,11 @@ def new_product_validation(payload: dict) -> bool:
             raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
 
         #[3.4] - VERIFICA SE O TIPO DE DADOS EM  validity, product_batch E product_name É STR
-        if not isinstance(item["product_name"], str) or not isinstance(item["product_batch"], str) or not isinstance(item["validity"], str):
+        if not isinstance(item["product_name"], str) or not isinstance(item["product_batch"], str) or not isinstance(item["validity"], str) or not isinstance(item["bar_code"], str):
             raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
 
-        #[3.5] - VERIFICA SE AS CHAVES product_name, product_batch E validity NÃO SÃO STRINGS VAZIAS
-        if not item["product_name"].strip() or not item["product_batch"].strip() or item["validity"].strip():
+        #[3.5] - VERIFICA SE AS CHAVES product_name, product_batch, validity E bar_code NÃO SÃO STRINGS VAZIAS
+        if not item["product_name"].strip() or not item["product_batch"].strip() or not item["validity"].strip() or not item["bar_code"].strip():
             raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
 
         return True
@@ -427,7 +428,7 @@ def action_target(payload: dict):
         return False
 
 
-def target_validation(payload: dict) -> bool:
+def payload_validation(payload: dict) -> bool:
     general_structure_result = structure_validation(payload)
 
     if not general_structure_result:

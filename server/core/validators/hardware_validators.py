@@ -31,24 +31,24 @@ def structure_validation(payload: dict) -> bool:
     try:
         #[1] - VERIFICA SE O PAYLOAD BRUTO É UM DICIONÁRIO
         if not isinstance(payload, dict):
-            raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
         #[2] - VERIFICA SE O PAYLOAD BRUTO POSSUI AS CHAVES "header" E "payload"
         if "header" not in payload or "payload" not in payload:
-            raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
         #[3] - VERIFICA SE AS CHAVES "header" E "payload" SÃO DICIONÁRIOS
         if not isinstance(payload["header"], dict) or not isinstance(payload["payload"], dict):
-            raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
 
         #[4] - VERIFICA SE O DICIONÁRIO "header" POSSUI TODAS AS CHAVES NECESSÁRIAS E QUE TODAS SÃO CORRETAS, SEM EXTRAS
         if set(payload["header"]) != set(header_keys):
-            raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
 
         #[5] - VERIFICA SE OS VALORES DAS CHAVES DE header SÃO STR E SE NÃO SÃO TEXTOS VAZIOS
         for value in payload["header"].values():
-            if not isinstance(value, str) or not value.strip() <= 0:
-                raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
 
         return True
     
@@ -85,7 +85,7 @@ def install_new_cabinet_validation(payload: dict) -> bool:
             raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
         #[2] - VERIFICA SE TODOS OS VALORES EM payload SÃO DO TIPO STR E SE NÃO ESTÃO VAZIOS.
-        for value in payload["payload"]:
+        for value in payload["payload"].value():
             if not isinstance(value, str) or not value.strip():
                 raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
@@ -110,17 +110,17 @@ def get_cabinet_info_validation(payload: dict) -> bool:
             "timestamp": "1785816136"
         },
         "payload": {
-            "cabinet_id": 8
+            "installed_cabinet_id": 8
         }
     }
 
     try:
-        #[1] - VERIFICA SE A CHAVE cabinet_id EXISTE NO DICT payload E SE NÃO EXISTE MAIS DE UMA CHAVE
-        if "cabinet_id" not in payload["payload"] or len(payload["payload"]) != 1:
+        #[1] - VERIFICA SE A CHAVE installed_cabinet_id EXISTE NO DICT payload E SE NÃO EXISTE MAIS DE UMA CHAVE
+        if "installed_cabinet_id" not in payload["payload"] or len(payload["payload"]) != 1:
             raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
-        #[2] - VERIFICA SE O VALOR DE cabinet_id É UM INT E SE É MAIOR QUE ZERO.
-        if not isinstance(payload["payload"]["cabinet_id"], int) or len(payload["payload"]["cabinet_id"]) <= 0:
+        #[2] - VERIFICA SE O VALOR DE installed_cabinet_id É UM INT E SE É MAIOR QUE ZERO.
+        if not isinstance(payload["payload"]["installed_cabinet_id"], int) or len(payload["payload"]["installed_cabinet_id"]) <= 0:
             raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
         return True
@@ -192,7 +192,7 @@ def get_shelf_info_validation(payload: dict) -> bool:
 
     try:
         #[1] - VERIFICA SE A CHAVE shelf_id EXISTE NO DICT payload E SE NÃO EXISTE MAIS DE UMA CHAVE
-        if "cabinet_id" not in payload["payload"] or len(payload["payload"]) != 1:
+        if "shelf_id" not in payload["payload"] or len(payload["payload"]) != 1:
             raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
         #[2] - VERIFICA SE O VALOR DE shelf_id É UM INT E SE É MAIOR QUE ZERO.
@@ -230,16 +230,16 @@ def action_target(payload: dict):
         action = payload.get("header", {}).get("action")
         
         if action not in action_mapping:
-            raise ValueError("\n[BANCO DE DADOS - PRODUTOS] AÇÃO INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] AÇÃO INVÁLIDA.")
 
         return action_mapping[action]
 
     except ValueError as e:
-        print(f"\n[BANCO DE DADOS - PRODUTOS] AÇÃO INVÁLIDA: [{e}]")
+        print(f"\n[BANCO DE DADOS - HARDWARES] AÇÃO INVÁLIDA: [{e}]")
         return False
 
 
-def target_validation(payload: dict) -> bool:
+def payload_validation(payload: dict) -> bool:
     general_structure_result = structure_validation(payload)
 
     if not general_structure_result:

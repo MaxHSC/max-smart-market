@@ -3,6 +3,7 @@ from server.core.models import temp_products_models as prod_mod
 from server.core.models import token_generator as token_gen
 from server.core.validators import shopping_validators as serv_val
 from server.core.calculations import products_calculations as prod_calc
+from server.core.services import hardware_services as hard_service
 
 # TODO: [Refatoração Futura - Arquitetura & Padronização]
     # 1. Avaliar evolução para 'Anemic Service': centralizar aqui a orquestração do ecossistema 
@@ -29,22 +30,28 @@ class ProductsServices():
         }
 
     def process_payload(self, payload: dict):
-        validation_result = serv_val.new_product_validation(payload)
+        validation_result = serv_val.payload_validation(payload)
 
         if not validation_result:
             return False
         
         payload_action = payload["header"]["action"]
 
-        action_result = self.action_mapping(payload_action)
+        action_target = self.action_mapping[payload_action]
+
+        header: dict = payload["header"]
+        payload: dict = payload["payload"]
+
+        action_result = action_target(header,payload)
 
         return action_result
 
 
+    def new_product(self, header:dict, payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
+        item: dict = payload["item"]
+        new_product_object = prod_mod.NewProduct(item)
 
-    def new_product(self,payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
-        new_product_object = prod_mod.Product()
-        result = prod_mod.new_product(bar_code, product_name, price, product_batch, validity, product_weight, cabinet_shelf_id, product_volume)
+        #new_product_object agora precisa ser levado para verificar se o shelf existe e se tem capacidade para a quantidade do produto.
 
         return result
 
