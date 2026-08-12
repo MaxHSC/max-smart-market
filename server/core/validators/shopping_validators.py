@@ -49,7 +49,7 @@ def structure_validation(payload: dict) -> bool:
 
         #[5] - VERIFICA SE OS VALORES DAS CHAVES DE header SÃO STR E SE NÃO SÃO TEXTOS VAZIOS
         for value in payload["header"].values():
-            if not isinstance(value, str) or not value.strip() <= 0:
+            if not isinstance(value, str) or not value.strip():
                 raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
 
         return True
@@ -157,7 +157,7 @@ def new_product_validation(payload: dict) -> bool:
         }
     }
 
-    product_keys = ["barc_code","product_name", "price", "product_batch", "validity", "product_weight", "shelf_id", "product_volume"]
+    product_keys = ["bar_code","product_name", "price", "product_batch", "validity", "product_weight", "shelf_id", "product_volume"]
 
     try:
         #[1] - VERIFICA SE O PAYLOAD POSSUI A CHAVE "item" E SE É UM DICT NÃO VAZIO

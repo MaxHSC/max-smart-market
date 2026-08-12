@@ -85,9 +85,10 @@ def install_new_cabinet_validation(payload: dict) -> bool:
             raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
         #[2] - VERIFICA SE TODOS OS VALORES EM payload SÃO DO TIPO STR E SE NÃO ESTÃO VAZIOS.
-        for value in payload["payload"].value():
-            if not isinstance(value, str) or not value.strip():
-                raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+        if isinstance(payload["payload"], dict):
+            for value in payload["payload"].values():
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
         return True
     
@@ -159,11 +160,22 @@ def install_new_shelf_validation(payload: dict) -> bool:
         if set(payload["payload"]) != set(payload_keys):
             raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
-        #[2] - VERIFICA SE TODOS OS VALORES EM payload SÃO DO TIPO STR E SE NÃO ESTÃO VAZIOS.
-        for value in payload["payload"]:
-            if not isinstance(value, str) or not value.strip():
-                raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+        #[2] - VERIFICA SE "hardware_mac_address" É UM STR E SE NÃO ESTÁ VAZIO.
+        if not isinstance(payload["payload"]["hardware_mac_address"], str) or not payload["payload"]["hardware_mac_address"].strip():
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
         
+        #[3] - VERIFICA SE "hardware_tcp_port" É UM STR E SE NÃO ESTÁ VAZIO.
+        if not isinstance(payload["payload"]["hardware_tcp_port"], str) or not payload["payload"]["hardware_tcp_port"].strip():
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+        
+        #[4] - VERIFICA SE "hardware_current_ip_address" É UM STR E SE NÃO ESTÁ VAZIO.
+        if not isinstance(payload["payload"]["hardware_current_ip_address"], str) or not payload["payload"]["hardware_current_ip_address"].strip():
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+
+        #[5] - VERIFICA SE "installed_cabinet_id" EM "payload" É UM INTEIRO
+        if not isinstance(payload["payload"]["installed_cabinet_id"], int) or payload["payload"]["installed_cabinet_id"] <= 0:
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+
         return True
     
     except ValueError as e:

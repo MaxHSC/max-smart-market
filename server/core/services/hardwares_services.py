@@ -1,6 +1,6 @@
 from server.database import hardware_dao as hard_dao
 from server.core.models import temp_hardware_models as hard_mod
-from server.core.validators import harware_validators as hard_val
+from server.core.validators import hardware_validators as hard_val
 
 class HardwareServices:
     def __init__(self):
@@ -42,54 +42,57 @@ class HardwareServices:
 
 
     def install_new_cabinet(self,header:dict,payload:dict) -> bool:
-        self.new_cabinet_object: hard_mod.NewCabinet = hard_mod.NewCabinet(payload)
+        new_cabinet_object: hard_mod.NewCabinet = hard_mod.NewCabinet(payload)
 
         attributes_fields = ["hardware_mac_address", "hardware_tcp_port"]
 
-        new_cabinet_dict = self.attributes_to_dict(self.new_cabinet_object, attributes_fields)
+        new_cabinet_dict = self.attributes_to_dict(new_cabinet_object, attributes_fields)
 
-        result = hard_dao.add_new_cabinet(self.new_cabinet_dict)
+        result = hard_dao.add_new_cabinet(new_cabinet_dict)
 
         return result
 
 
-    def get_cabinet_info(self,header:dict,payload:dict) -> hard_mod.InstalledCabinet:
+    def get_cabinet_info(self,header:dict,payload:dict) -> hard_mod.InstalledCabinet | None:
         cabinet_info: dict = hard_dao.get_cabinet_info(payload["installed_cabinet_id"])
 
         if not cabinet_info:
-            return cabinet_info
+            return None
 
-        self.cabinet_object: hard_mod.InstalledCabinet = hard_mod.InstalledCabinet(cabinet_info)
+        cabinet_object: hard_mod.InstalledCabinet = hard_mod.InstalledCabinet(cabinet_info)
 
-        return self.cabinet_object
+        return cabinet_object
 
 
     def install_new_shelf(self,header:dict,payload:dict) -> bool:
-        cabinet_object: hard_mod.InstalledCabinet = self.get_cabinet_info(header,payload)
+        cabinet_object: hard_mod.InstalledCabinet | None = self.get_cabinet_info(header,payload)
+
+        if cabinet_object is None:
+            return False
 
         if cabinet_object.current_installed_shelf + 1 > cabinet_object.shelf_capacity:
             return False
         
-        self.new_shelf_object: hard_mod.NewShelf = hard_mod.NewShelf(payload)
+        new_shelf_object: hard_mod.NewShelf = hard_mod.NewShelf(payload)
 
         attributes_fields = ["isntalled_cabinet_id","hardware_mac_address", "hardware_tcp_port"]
 
-        new_shelf_dict = self.attributes_to_dict(self.new_shelf_object, attributes_fields)
+        new_shelf_dict = self.attributes_to_dict(new_shelf_object, attributes_fields)
 
         result = hard_dao.add_new_shelf(new_shelf_dict,cabinet_object.id)
 
         return result
 
 
-    def get_shelf_info(self,header:dict,payload:dict) -> hard_mod.InstalledShelf:
+    def get_shelf_info(self,header:dict,payload:dict) -> hard_mod.InstalledShelf | dict:
         shelf_info: dict = hard_dao.get_shelf_info(payload["shelf_id"])
 
         if not shelf_info:
             return shelf_info
 
-        self.shelf_object: hard_mod.InstalledShelf = hard_mod.InstalledShelf(shelf_info)
+        shelf_object: hard_mod.InstalledShelf = hard_mod.InstalledShelf(shelf_info)
 
-        return self.shelf_object
+        return shelf_object
         
 
 sample_payload = {

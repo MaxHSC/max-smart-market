@@ -1,10 +1,10 @@
-from server.database import inventory_dao as inv_dao
+from server.database import inventory_dao as inv_dao, hardware_dao as hard_dao
 from server.core.gateways import payment_gateway_simulator as pay_gat
 from server.core.models import temp_products_models as prod_mod
 from server.core.models import token_generator as token_gen
+from server.core.models import temp_hardware_models as hard_mod
 from server.core.validators import shopping_validators as serv_val
 from server.core.calculations import products_calculations as prod_calc
-from server.core.services import hardware_services as hard_services
 
 # TODO: [Refatoração Futura - Arquitetura & Padronização]
     # 1. Avaliar evolução para 'Anemic Service': centralizar aqui a orquestração do ecossistema 
@@ -20,7 +20,7 @@ class ProductsServices():
         self.order = []
         self.action_mapping ={
             "NEW_PRODUCT": self.new_product,
-            "CHANGE_PRODUCT_INFO": change_product_info_validation,
+            "CHANGE_PRODUCT_INFO": self.change_product_info,
             "ORDER_CREATE": reserve_order_validation,
             "ORDER_CANCEL": cancel_order_validation,
             "ORDER_RESTORE": restore_order_validation,
@@ -30,6 +30,7 @@ class ProductsServices():
             "GET_PRODUCT_INFO": get_product_info_validation,
         }
 
+#region GENERAL UTILS
     def process_payload(self, payload: dict):
         validation_result = serv_val.payload_validation(payload)
 
@@ -41,42 +42,57 @@ class ProductsServices():
         action_target = self.action_mapping[payload_action]
 
         header: dict = payload["header"]
-        payload: dict = payload["payload"]
+        body_payload: dict = payload["payload"]
 
-        action_result = action_target(header,payload)
+        action_result = action_target(header,body_payload)
 
         return action_result
 
 
+    def get_shelf_info(self,header:dict,body_payload:dict) -> hard_mod.InstalledShelf | None:
+        shelf_info: dict = hard_dao.get_shelf_info(body_payload["shelf_id"])
+
+        if not shelf_info:
+            return None
+
+        shelf_object: hard_mod.InstalledShelf = hard_mod.InstalledShelf(shelf_info)
+
+        return shelf_object
+
+
     def attributes_to_dict(self,self_object, fields: list[str]) -> dict:
-        object_dict = {}
+        object_dict: dict = {}
 
         for field in fields:
             object_dict[field] = getattr(self_object,field)
         
         return object_dict
+#endregion
 
-    def new_product(self, header:dict, payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
-        item: dict = payload["item"]
-        self.new_product_object: prod_mod.NewProduct = prod_mod.NewProduct(item)
+    def new_product(self, header:dict, body_payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
+        item: dict = body_payload["item"]
+        new_product_object: prod_mod.NewProduct = prod_mod.NewProduct(item)
 
-        shelf_object: hard_mod.InstalledShelf = hard_services.get_shelf_info(header,payload=item)
+        shelf_object: hard_mod.InstalledShelf | None = self.get_shelf_info(header,body_payload=item)
 
-        if shelf_object.current_volume + self.new_product_object.product_volume > shelf_object.volume_capacity or shelf_object.current_volume + self.new_product_object.product_volume <= 0:
+        if shelf_object is None:
+            return False
+
+        if shelf_object.current_volume + new_product_object.product_volume > shelf_object.volume_capacity or shelf_object.current_volume + new_product_object.product_volume <= 0:
             return False
         
-        if shelf_object.current_weight_grams + (self.new_product_object.product_weight * self.new_product_object.product_volume) > shelf_object.weight_capacity_grams or shelf_object.current_weight_grams + (self.new_product_object.product_weight * self.new_product_object.product_volume) <= 0:
+        if shelf_object.current_weight_grams + (new_product_object.product_weight * new_product_object.product_volume) > shelf_object.weight_capacity_grams or shelf_object.current_weight_grams + (new_product_object.product_weight * new_product_object.product_volume) <= 0:
             return False
         
-        shelf_object.current_volume = shelf_object.current_volume + self.new_product_object.product_volume
+        shelf_object.current_volume = shelf_object.current_volume + new_product_object.product_volume
         
-        shelf_object.current_weight_grams = shelf_object.current_weight_grams + (self.new_product_object.product_weight * self.new_product_object.product_volume)
+        shelf_object.current_weight_grams = shelf_object.current_weight_grams + (new_product_object.product_weight * new_product_object.product_volume)
 
         new_product_attributes_list = ["product_name", "bar_code", "price", "product_batch", "validity", "product_weight", "shelf_id", "product_volume"]
 
         shelf_attributes_list = ["current_weight_grams", "current_volume", "id"]
 
-        new_product_dict: dict = self.attributes_to_dict(self.new_product_object,new_product_attributes_list)
+        new_product_dict: dict = self.attributes_to_dict(new_product_object,new_product_attributes_list)
 
         update_shelf_dict: dict = self.attributes_to_dict(shelf_object, shelf_attributes_list)
 

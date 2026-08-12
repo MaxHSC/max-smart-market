@@ -155,7 +155,7 @@ def add_new_shelf(shelf_info: dict, cabinet_id: int) -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql_update_cabinet, cabinet_id)
+        cursor.execute(sql_update_cabinet, (cabinet_id,))
 
         if cursor.rowcount == 0:
             connection.rollback()
@@ -170,8 +170,8 @@ def add_new_shelf(shelf_info: dict, cabinet_id: int) -> bool:
     except sqlite3.IntegrityError:
         if connection:
             connection.rollback()
-            print(f"\n[BANCO DE DADOS - HARDWARE] JÁ EXISTE UMA PRATELEIRA INSTALADA COM O MESMO MAC.")
-            return False
+        print(f"\n[BANCO DE DADOS - HARDWARE] JÁ EXISTE UMA PRATELEIRA INSTALADA COM O MESMO MAC.")
+        return False
 
     except sqlite3.Error as error:
         if connection:
@@ -268,7 +268,7 @@ def get_shelf_info(shelf_id: int) -> Dict:
             "current_weight_grams": shelf[4],
             "current_volume": shelf[5],
             "hardware_mac_address":shelf[6],
-            "hardware_ip_address":cabinet[7],
+            "hardware_ip_address":shelf[7],
             "hardware_tcp_port":shelf[8],
         }
 
@@ -300,7 +300,7 @@ def remove_cabinet(cabinet_id: int):
         cursor = connection.cursor()
         cursor.execute(sql_cabinet, (cabinet_id,))
         connection.commit()
-        print(f"\[BANCO DE DADOS - HARDWARE] ARMÁRIO REMOVIDO COM SUCESSO.")
+        print("\n[BANCO DE DADOS - HARDWARE] ARMÁRIO REMOVIDO COM SUCESSO.")
         
         return True
     
@@ -339,7 +339,7 @@ def remove_shelf(shelf_id: int, installed_cabinet_id: int, new_cabinet_installed
             cursor.execute(sql_shelf, (shelf_id,))
             cursor.execute(sql_cabinet, (installed_cabinet_id, new_cabinet_installed_shelfs))
             connection.commit()
-            print(f"\[BANCO DE DADOS - HARDWARE] PRATELEIRA REMOVIDA COM SUCESSO.")
+            print("\n[BANCO DE DADOS - HARDWARE] PRATELEIRA REMOVIDA COM SUCESSO.")
             
             return True
         
