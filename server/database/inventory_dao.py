@@ -80,7 +80,7 @@ def get_product_available_stock_info(product_id: int):
     sql_product = '''
         SELECT product_volume,
         product_weight,
-        cabinet_shelf_id
+        shelf_id
         FROM products
         WHERE id = ?;
     '''

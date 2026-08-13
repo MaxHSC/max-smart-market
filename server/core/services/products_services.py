@@ -159,8 +159,16 @@ class ProductsServices():
         return result
 #endregion
 
-    def reserve_order(self,order: list) -> tuple: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
-        validation_result = serv_val.reserve_oder_validation(order) #ALTERAR O QUE ENVIAR PARA A FUNÇÃO DE VALIDAÇÃO, POIS AINDA NÃO ESTÁ DEFINIDO O QUE SERÁ ENVIADO PARA A FUNÇÃO DE VALIDAÇÃO.
+#region ACTIONS RESERVE
+    def reserve_order(self,header: dict, body_payload: dict) -> tuple: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
+        items: list[dict] = body_payload["items"]
+        real_stock_products_object = []
+
+        for product in items:
+            product_object = prod_mod.RealStockProduct = self.get_product_real_stock_object(header,product)
+            real_stock_products_object.append(product_object)
+            
+            
 
         if not validation_result:
             return None, None, None, None

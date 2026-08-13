@@ -45,3 +45,22 @@ class RealStockProduct:
         self.shelf_id = product["shelf_id"]
         self.product_volume = product["product_volume"]
         self.available = product["available"]
+
+class AvailableProduct:
+    def __init__(self,product: dict):
+        self.product_id = product["product_id"]
+        self.product_volume = product["product_volume"]
+        self.
+
+class PurchaseOrder:
+    def __init__(self,header: dict, products: list[dict]):
+        self.order_number = None
+        self.user_id = header["user_id"]
+        self.total_order_price = None
+        self.product_id_list = products["items"]
+        self.product_total_price = None
+        self.product_unit_price = []
+        self.created_time = None
+        self.expires_time = None
+        self.reserve_status = "PENDENTE"
+        self.payment_status = "PENDENTE"
