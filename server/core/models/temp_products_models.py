@@ -23,26 +23,25 @@ class NewProduct:
                 }
             }
         }
-    def __init__(self,item: dict):
-        self.product_name = item["product_name"]
-        self.bar_code = item["bar_code"]
-        self.price = item["price"]
-        self.product_batch = item["product_batch"]
-        self.validity = item["validity"]
-        self.product_weight = item["product_weight"]
-        self.shelf_id = item["shelf_id"]
-        self.product_volume = item["product_volume"]
+    def __init__(self,product: dict):
+        self.product_name = product["product_name"]
+        self.bar_code = product["bar_code"]
+        self.price = product["price"]
+        self.product_batch = product["product_batch"]
+        self.validity = product["validity"]
+        self.product_weight = product["product_weight"]
+        self.shelf_id = product["shelf_id"]
+        self.product_volume = product["product_volume"]
 
-class RegisteredProduct:
-    def __init__(self,bar_code: int, product_name: str, price: float, product_batch: str, validity: str, product_weight: float, shelf_id: int, product_volume: int):
-        self.product_id = id
-        self.bar_code = bar_code
-        self.product_name = product_name
-        self.price = price
-        self.product_batch = product_batch
-        self.validity = validity
-        self.product_weight = product_weight
-        self.shelf_id = shelf_id
-        self.product_volume = product_volume
-        self.reserved_volume = reserved_volume
-        self.available = available
+class RealStockProduct:
+    def __init__(self,product: dict):
+        self.product_id = product["product_id"]
+        self.bar_code = product["bar_code"]
+        self.product_name = product["product_name"]
+        self.price = product["price"]
+        self.product_batch = product["product_batch"]
+        self.validity = product["validity"]
+        self.product_weight = product["product_weight"]
+        self.shelf_id = product["shelf_id"]
+        self.product_volume = product["product_volume"]
+        self.available = product["available"]

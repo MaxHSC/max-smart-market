@@ -49,16 +49,25 @@ class ProductsServices():
         return action_result
 
 
-    def get_shelf_info(self,header:dict,body_payload:dict) -> hard_mod.InstalledShelf | None:
+    def get_shelf_object(self,header:dict,body_payload:dict) -> hard_mod.InstalledShelf | None:
         shelf_info: dict = hard_dao.get_shelf_info(body_payload["shelf_id"])
 
-        if not shelf_info:
+        if shelf_info is None:
             return None
 
         shelf_object: hard_mod.InstalledShelf = hard_mod.InstalledShelf(shelf_info)
 
         return shelf_object
 
+    def get_product_real_stock_object(self, header: dict, body_payload: dict) -> prod_mod.RealStockProduct | None:
+        product_info: dict = inv_dao.get_product_real_stock_info(body_payload)
+
+        if product_info is None:
+            return None
+        
+        real_stock_product_object: prod_mod.RealStockProduct = prod_mod.RealStockProduct(product_info)
+
+        return real_stock_product_object
 
     def attributes_to_dict(self,self_object, fields: list[str]) -> dict:
         object_dict: dict = {}
@@ -69,15 +78,20 @@ class ProductsServices():
         return object_dict
 #endregion
 
+
+#region ACTIONS NEW
     def new_product(self, header:dict, body_payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
         item: dict = body_payload["item"]
         new_product_object: prod_mod.NewProduct = prod_mod.NewProduct(item)
 
-        shelf_object: hard_mod.InstalledShelf | None = self.get_shelf_info(header,body_payload=item)
+        if new_product_object is None:
+            return False
+
+        shelf_object: hard_mod.InstalledShelf | None = self.get_shelf_object(header,body_payload=item)
 
         if shelf_object is None:
             return False
-
+#region CALCS
         if shelf_object.current_volume + new_product_object.product_volume > shelf_object.volume_capacity or shelf_object.current_volume + new_product_object.product_volume <= 0:
             return False
         
@@ -87,7 +101,7 @@ class ProductsServices():
         shelf_object.current_volume = shelf_object.current_volume + new_product_object.product_volume
         
         shelf_object.current_weight_grams = shelf_object.current_weight_grams + (new_product_object.product_weight * new_product_object.product_volume)
-
+#region CALCS
         new_product_attributes_list = ["product_name", "bar_code", "price", "product_batch", "validity", "product_weight", "shelf_id", "product_volume"]
 
         shelf_attributes_list = ["current_weight_grams", "current_volume", "id"]
@@ -99,16 +113,51 @@ class ProductsServices():
         result = inv_dao.add_new_product(new_product_dict, update_shelf_dict)
 
         return result
+#enderion
 
-    def change_product_info(self,product_info,selected_column,new_value,command=None,product_weight=None) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
-        validation_result = serv_val.change_product_info_validation(selected_column, new_value)
+#region ACTIONS CHANGE
+    def change_product_info(self,header: dict, body_payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
+        item: dict = body_payload["item"]
+        update_shelf_dict: dict = None
 
-        if not validation_result:
+        real_stock_product_object: prod_mod.RealStockProduct = self.get_product_real_stock_object(header,body_payload=item)
+
+        if real_stock_product_object is None:
             return False
 
-        result = prod_mod.change_product_info(product_info,selected_column,new_value,command,product_weight)
+        shelf_object: hard_mod.InstalledShelf | None = self.get_shelf_object(header,body_payload=item)
+
+        if shelf_object is None:
+            return False
+#region CALCS        
+        if item["column_to_change"] == "product_volume":
+            shelf_delta_volume = shelf_object.current_volume - real_stock_product_object.product_volume
+            shelf_delta_weight = shelf_object.current_weight_grams - (real_stock_product_object.product_weight * real_stock_product_object.product_volume)
+
+            shelf_new_volume = shelf_delta_volume + item["new_value"]
+            if shelf_new_volume > shelf_object.volume_capacity:
+                return False
+            
+            shelf_new_weight = shelf_delta_weight + (real_stock_product_object.product_weight * item["new_value"])
+            if shelf_new_weight > shelf_object.weight_capacity_grams:
+                return False
+#region CALCS            
+            shelf_object.current_volume = shelf_new_volume
+            shelf_object.current_weight_grams = shelf_new_weight
+
+            shelf_attributes_list = ["current_weight_grams", "current_volume", "id"]
+            update_shelf_dict: dict = self.attributes_to_dict(shelf_object, shelf_attributes_list)
+        
+        setattr(real_stock_product_object, item["column_to_change"], item["new_value"])
+
+        product_attributes_list = ["product_name", "price", "product_volume", "available"]
+
+        update_product_dict: dict = self.attributes_to_dict(real_stock_product_object, product_attributes_list)
+        
+        result = inv_dao.change_product_info(update_product_dict,update_shelf_dict)
 
         return result
+#endregion
 
     def reserve_order(self,order: list) -> tuple: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
         validation_result = serv_val.reserve_oder_validation(order) #ALTERAR O QUE ENVIAR PARA A FUNÇÃO DE VALIDAÇÃO, POIS AINDA NÃO ESTÁ DEFINIDO O QUE SERÁ ENVIADO PARA A FUNÇÃO DE VALIDAÇÃO.

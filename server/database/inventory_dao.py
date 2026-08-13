@@ -25,7 +25,58 @@ def get_shelf_id(product_id: int, cursor) -> int:
         return False
 
 
-def get_product_info(product_id: int):
+def get_product_real_stock_info(body_payload: dict) -> dict | None:
+    sql_product = '''
+        SELECT id,
+        bar_code,
+        product_name,
+        price,
+        product_batch,
+        validity,
+        product_weight,
+        shelf_id,
+        product_volume,
+        avaliable
+        FROM products
+        WHERE id = :product_id;
+    '''
+
+    start_database()
+    connection = connect_database()
+    cursor = None
+    product_info = {}
+
+    try:
+        cursor = connection.cursor()
+        cursor.execute(sql_product, body_payload)
+        line = cursor.fetchone()
+        
+        product_info = {
+            "product_id":line[0],
+            "bar_code":line[1],
+            "product_name":line[2],
+            "price":line[3],
+            "product_batch":line[4],
+            "validity":line[5],
+            "product_weight":line[6],
+            "shelf_id":line[7],
+            "product_volume":line[8],
+            "avaliable":line[9]
+        }
+
+        return product_info
+
+    except sqlite3.Error as error:
+        print(f"\n[BANCO DE DADOS] ERRO NA BUSCA DO PRODUTO: [{error}]\n")
+        return None
+
+    finally:
+        if cursor:
+            cursor.close()
+        connection.close()
+
+
+def get_product_available_stock_info(product_id: int):
     sql_product = '''
         SELECT product_volume,
         product_weight,
@@ -310,19 +361,25 @@ def add_new_product(new_product_dict: dict, update_shelf_dict: dict) -> bool:
             cursor.close()
         connection.close()
 
-def change_product_info(product_id,selected_column,new_value,command=None,shelf_id=None,shelf_new_weight=None,shelf_new_volume=None) -> bool:
+def change_product_info(update_product_dict: dict, update_shelf_dict: dict = None) -> bool:
     '''
     INSERIR LÓGICA QUE ALTERA INFORMAÇÕES DO PRODUTO COM BASE NO PRODUTO SELECIONADO
     PELO USUÁRIO, A PARTIR DO ID DO PRODUTO, OBTIDO NA BUSCA POR NOME OU POR LISTA
     '''
+    column = update_product_dict["column_to_change"]
     sql_product = f'''
-        UPDATE products SET {selected_column} = ? WHERE id = ?;
+        UPDATE products
+        SET product_name = :product_name,
+            price = :price,
+            product_volume = :product_volume,
+            available = :available
+        WHERE id = :product_id;
     '''
     sql_shelf = '''
         UPDATE shelfs
-        SET current_weight_grams = ?,
-            current_volume = ?
-        WHERE id = ?
+        SET current_weight_grams = :current_weight_grams,
+            current_volume = :current_volume
+        WHERE id = :id;
     '''
     
     start_database()
@@ -332,9 +389,9 @@ def change_product_info(product_id,selected_column,new_value,command=None,shelf_
     try:
         cursor = connection.cursor()
 
-        if command:
-            cursor.execute(sql_shelf, (shelf_new_weight,shelf_new_volume,shelf_id))
-        cursor.execute(sql_product, (new_value, product_id))
+        if update_shelf_dict is not None:
+            cursor.execute(sql_shelf, update_shelf_dict)
+        cursor.execute(sql_product, update_product_dict)
 
         connection.commit()
         print(f"\n[BANCO DE DADOS] PRODUTO ATUALIZADO COM SUCESSO\n")

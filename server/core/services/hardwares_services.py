@@ -56,7 +56,7 @@ class HardwareServices:
     def get_cabinet_info(self,header:dict,payload:dict) -> hard_mod.InstalledCabinet | None:
         cabinet_info: dict = hard_dao.get_cabinet_info(payload["installed_cabinet_id"])
 
-        if not cabinet_info:
+        if cabinet_info is None:
             return None
 
         cabinet_object: hard_mod.InstalledCabinet = hard_mod.InstalledCabinet(cabinet_info)
@@ -84,11 +84,11 @@ class HardwareServices:
         return result
 
 
-    def get_shelf_info(self,header:dict,payload:dict) -> hard_mod.InstalledShelf | dict:
+    def get_shelf_info(self,header:dict,payload:dict) -> hard_mod.InstalledShelf | None:
         shelf_info: dict = hard_dao.get_shelf_info(payload["shelf_id"])
 
-        if not shelf_info:
-            return shelf_info
+        if shelf_info is None:
+            return None
 
         shelf_object: hard_mod.InstalledShelf = hard_mod.InstalledShelf(shelf_info)
 
