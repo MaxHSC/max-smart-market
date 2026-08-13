@@ -150,7 +150,7 @@ class ProductsServices():
         
         setattr(real_stock_product_object, item["column_to_change"], item["new_value"])
 
-        product_attributes_list = ["product_name", "price", "product_volume", "available"]
+        product_attributes_list = ["product_id", "product_name", "price", "product_volume", "available"]
 
         update_product_dict: dict = self.attributes_to_dict(real_stock_product_object, product_attributes_list)
         
