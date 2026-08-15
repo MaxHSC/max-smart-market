@@ -218,12 +218,12 @@ def reserve_order_validation(payload: dict) -> bool: #VARIÁVEIS SERÃO DEFINIDA
                 "items": [ #ITEMS COM S, NO PLURAL, POIS É LISTA DE ITENS
                     {
                         "product_id": 29,
-                        "quantity": 3,
+                        "requested_volume": 3,
                     }
                 ],
             }
     }
-    items_keys = ["product_id", "quantity"]
+    items_keys = ["product_id", "requested_volume"]
     try:
         #[1] - VERIFICA SE O PAYLOAD POSSUI A CHAVE items E SE É UMA LISTA NÃO VAZIA
         if "items" not in payload["payload"] or not isinstance(payload["payload"]["items"], list) or len(payload["payload"]["items"]) == 0:
@@ -241,12 +241,12 @@ def reserve_order_validation(payload: dict) -> bool: #VARIÁVEIS SERÃO DEFINIDA
             if set(item) != set(items_keys):
                 raise ValueError("\n[BANCO DE DADOS - COMPRAS] ESTRUTURA DE DADOS INVÁLIDA.")
 
-            #[2.3] - VERIFICA SE product_id E quantity SÃO INT
-            if not isinstance(item["product_id"], int) or not isinstance(item["quantity"], int):
+            #[2.3] - VERIFICA SE product_id E requested_volume SÃO INT
+            if not isinstance(item["product_id"], int) or not isinstance(item["requested_volume"], int):
                 raise ValueError("\n[BANCO DE DADOS - COMPRAS] ESTRUTURA DE DADOS INVÁLIDA.")
 
-            #[2.4] - VERIFICA SE product_id E quantity SÃO MAIORES QUE 0
-            if item["product_id"] <= 0 or item["quantity"] <= 0:
+            #[2.4] - VERIFICA SE product_id E requested_volume SÃO MAIORES QUE 0
+            if item["product_id"] <= 0 or item["requested_volume"] <= 0:
                 raise ValueError("\n[BANCO DE DADOS - COMPRAS] ESTRUTURA DE DADOS INVÁLIDA.")
 
         return True

@@ -16,8 +16,6 @@ from server.core.calculations import products_calculations as prod_calc
 
 class ProductsServices():
     def __init__(self):
-        self.order_number = None
-        self.order = []
         self.action_mapping ={
             "NEW_PRODUCT": self.new_product,
             "CHANGE_PRODUCT_INFO": self.change_product_info,
@@ -228,7 +226,7 @@ class ProductsServices():
 #   },
 #   "payload": {
 #     "items": [
-#       { "product_id": 104, "quantity": 2 }
+#       { "product_id": 104, "requested_volume": 2 }
 #     ],
 #     "payment_method": "PIX"
 #   }

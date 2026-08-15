@@ -34,7 +34,7 @@ payload_sample ={
   },
   "payload": {
     "items": [
-      { "product_id": 104, "quantity": 2 }
+      { "product_id": 104, "requested_volume": 2 }
     ],
     "payment_method": "PIX"
   }

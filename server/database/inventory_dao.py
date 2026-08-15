@@ -76,16 +76,10 @@ def get_product_real_stock_info(body_payload: dict) -> dict | None:
         connection.close()
 
 
-def get_product_available_stock_info(product_id: int):
-    sql_product = '''
-        SELECT product_volume,
-        product_weight,
-        shelf_id
-        FROM products
-        WHERE id = ?;
-    '''
-    sql_reserved = '''
-        SELECT SUM(amount_reserved)
+def get_product_reserved_stock_info(product_id: int):
+    sql_order = '''
+        SELECT product_id,
+            SUM(reserved_volume)
         FROM orders
         WHERE product_id = :product_id
             AND reserve_status = "PENDENTE"
@@ -95,27 +89,23 @@ def get_product_available_stock_info(product_id: int):
     start_database()
     connection = connect_database()
     cursor = None
+    reserved_info = {}
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql_product, (product_id,))
-        list = cursor.fetchone()
+        cursor.execute(sql_order, (product_id,))
+        order_line = cursor.fetchone()
 
-        stock_product_volume = list[0]
-        product_weight = list[1]
-        shelf_cabinet_id = list[2]
+        reserved_info = {
+            "product_id":order_line[0],
+            "reserved_volume":order_line[1],
+        }
 
-        cursor.execute(sql_reserved, (product_id,))
-        amount_reserved = cursor.fetchone()
-
-        if not amount_reserved[0]:
-            amount_reserved = 0
-
-        return amount_reserved, stock_product_volume, product_weight, shelf_cabinet_id
+        return reserved_info
 
     except sqlite3.Error as error:
         print(f"\n[BANCO DE DADOS] ERRO NA BUSCA DO PRODUTO: [{error}]\n")
-        return False, False, False, False
+        return None
 
     finally:
         if cursor:
@@ -488,8 +478,11 @@ def restore_order(order_number: int) -> list:
     AFTER GATEWAY CONFIRM THE PAYMENT, IT WILL RETURN THIS CONFIRMATION WITH THE RELATED ORDER NUMBER, MODELS WILL REQUEST FOR THE ORDER RESTAURATION TO PROCEED WITH THE SOTCK REDUCE AND WITHDRAWAL ON CABINETS
     '''
     sql_restore = '''
-        SELECT product_id,
-        amount_reserved
+        SELECT total_order_price,
+        product_id,
+        reserved_volume,
+        created_time,
+        expires_time
         FROM orders
         WHERE order_number = ?;
     '''
@@ -498,19 +491,26 @@ def restore_order(order_number: int) -> list:
     connection = connect_database()
     cursor = None
 
-    order_restored = []
+    products_id_list = []
     try:
         cursor = connection.cursor()
         cursor.execute(sql_restore, (order_number,))
         lines = cursor.fetchall()
 
         for line in lines:
-            order_restored.append(
+            products_id_list.append(
                 {
-                    "product_id":line[0],
-                    "product_volume":line[1],
+                    "product_id":line[1],
+                    "requested_volume":line[2],
                 }
             )
+        order_restored = {
+            "order_number": order_number,
+            "total_order_price": lines[0][0],
+            "product_id_list": products_id_list,
+            "created_time": lines[0][3],
+            "expires_time": lines[0][4]
+        }
         
         return order_restored
     
@@ -535,9 +535,10 @@ def reserve_order(order: list) -> bool:
         product_id,
         product_unit_price,
         product_total_price,
-        amount_reserved,
+        reserved_volume,
+        created_time,
         expires_time)
-        VALUES (:order_number,:user_id,:total_order_price,:product_id,:product_unit_price,:product_total_price,:product_volume,:expires_time)
+        VALUES (:order_number,:user_id,:total_order_price,:product_id,:product_unit_price,:product_total_price,:product_volume,:created_time,:expires_time)
     '''
     start_database()
     connection = connect_database()
@@ -545,7 +546,7 @@ def reserve_order(order: list) -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.executemany(sql, order[1:])
+        cursor.executemany(sql, order)
 
         connection.commit()
         print(f"\n[BANCO DE DADOS ORDEM DE COMPRA] PEDIDO REGISTRADO. AGUARDANDO CONFIRMAÇÃO DE PAGAMENTO.\n")

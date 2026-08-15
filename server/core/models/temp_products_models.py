@@ -46,19 +46,23 @@ class RealStockProduct:
         self.product_volume = product["product_volume"]
         self.available = product["available"]
 
-class AvailableProduct:
+class ReservedProduct:
     def __init__(self,product: dict):
         self.product_id = product["product_id"]
-        self.product_volume = product["product_volume"]
-        self.
+        self.reserved_volume = product["reserved_volume"]
+    
+class OrderProduct:
+    def __init__(self,product: dict):
+        self.product_id = product["product_id"]
+        self.requested_volume = product["requested_volume"]
 
 class PurchaseOrder:
-    def __init__(self,header: dict, products: list[dict]):
+    def __init__(self,header: dict, products: list[dict]): #VERIFICAR A NECESSIDADE DE INSERIR O OBJETO DA CONEXAO
         self.order_number = None
         self.user_id = header["user_id"]
         self.total_order_price = None
         self.product_id_list = products["items"]
-        self.product_total_price = None
+        self.product_total_price = []
         self.product_unit_price = []
         self.created_time = None
         self.expires_time = None

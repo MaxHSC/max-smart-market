@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS orders (
     product_id INTEGER NOT NULL,
     product_unit_price REAL NOT NULL CHECK (product_unit_price >= 0),
     product_total_price REAL NOT NULL CHECK (product_total_price >= 0),
-    reserved_volume INTEGER NOT NULL CHECK (reserved_volume > 0),
+    reserved_volume INTEGER NOT NULL CHECK (reserved_volume > 0), --CHANGE TO requested_volume
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_time DATETIME NOT NULL,
     reserve_status TEXT DEFAULT 'PENDENTE' CHECK (reserve_status IN ('PENDENTE', 'CONCLUIDA', 'EXPIRADA', 'CANCELADA')),
