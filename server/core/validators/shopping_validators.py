@@ -45,7 +45,7 @@ def structure_validation(payload: dict) -> bool:
 
         #[4] - VERIFICA SE O DICIONÁRIO "header" POSSUI TODAS AS CHAVES NECESSÁRIAS E QUE TODAS SÃO CORRETAS, SEM EXTRAS
         if set(payload["header"]) != set(header_keys):
-            raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - PRODUTOS] ESTRUTURA DE DADOS INVÁLIDA [DEGUB].")
 
         #[5] - VERIFICA SE OS VALORES DAS CHAVES DE header SÃO STR E SE NÃO SÃO TEXTOS VAZIOS
         for value in payload["header"].values():

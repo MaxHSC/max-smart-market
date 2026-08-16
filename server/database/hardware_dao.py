@@ -115,7 +115,7 @@ def get_cabinet_info(cabinet_id: int) -> dict:
             "shelf_capacity": cabinet[1],
             "current_installed_shelf": cabinet[2],
             "hardware_mac_address":cabinet[3],
-            "hardware_ip_address":cabinet[4],
+            "hardware_current_ip_address":cabinet[4],
             "hardware_tcp_port":cabinet[5],
         }
 
@@ -136,7 +136,7 @@ def add_new_shelf(shelf_info: dict, cabinet_id: int) -> bool:
     sql_create_shelf = '''
         INSERT INTO shelfs (
         installed_cabinet_id,
-        mac_addres,
+        mac_address,
         tcp_port
         )
         VALUES (:installed_cabinet_id,:hardware_mac_address,:hardware_tcp_port)
@@ -268,7 +268,7 @@ def get_shelf_info(shelf_id: int) -> Dict:
             "current_weight_grams": shelf[4],
             "current_volume": shelf[5],
             "hardware_mac_address":shelf[6],
-            "hardware_ip_address":shelf[7],
+            "hardware_current_ip_address":shelf[7],
             "hardware_tcp_port":shelf[8],
         }
 

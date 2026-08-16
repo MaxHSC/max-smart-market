@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS orders (
     created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     expires_time DATETIME NOT NULL,
     reserve_status TEXT DEFAULT 'PENDENTE' CHECK (reserve_status IN ('PENDENTE', 'CONCLUIDA', 'EXPIRADA', 'CANCELADA')),
+    payment_status TEXT DEFAULT 'PENDENTE' CHECK (reserve_status IN ('PENDENTE', 'CONCLUIDA', 'EXPIRADA', 'CANCELADA')),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
 );

@@ -158,23 +158,23 @@ def install_new_shelf_validation(payload: dict) -> bool:
     try:
         #[1] - VERIFICA SE O DICT payload POSSUI TODAS AS CHAVES NECESSÁRIAS E QUE TODAS SÃO CORRETAS, SEM CHAVES EXTRA
         if set(payload["payload"]) != set(payload_keys):
-            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA [PAYLOAD KEYS].")
         
         #[2] - VERIFICA SE "hardware_mac_address" É UM STR E SE NÃO ESTÁ VAZIO.
         if not isinstance(payload["payload"]["hardware_mac_address"], str) or not payload["payload"]["hardware_mac_address"].strip():
-            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA [PAYLOAD MAC].")
         
         #[3] - VERIFICA SE "hardware_tcp_port" É UM STR E SE NÃO ESTÁ VAZIO.
         if not isinstance(payload["payload"]["hardware_tcp_port"], str) or not payload["payload"]["hardware_tcp_port"].strip():
-            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA [PAYLOAD TCP PORT].")
         
         #[4] - VERIFICA SE "hardware_current_ip_address" É UM STR E SE NÃO ESTÁ VAZIO.
         if not isinstance(payload["payload"]["hardware_current_ip_address"], str) or not payload["payload"]["hardware_current_ip_address"].strip():
-            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA [PAYLOAD IP].")
 
         #[5] - VERIFICA SE "installed_cabinet_id" EM "payload" É UM INTEIRO
         if not isinstance(payload["payload"]["installed_cabinet_id"], int) or payload["payload"]["installed_cabinet_id"] <= 0:
-            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA.")
+            raise ValueError("\n[BANCO DE DADOS - HARDWARES] ESTRUTURA DE DADOS INVÁLIDA [PAYLOAD CABINET ID].")
 
         return True
     

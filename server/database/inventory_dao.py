@@ -76,7 +76,7 @@ def get_product_real_stock_info(body_payload: dict) -> dict | None:
         connection.close()
 
 
-def get_product_reserved_stock_info(product_id: int):
+def get_product_reserved_stock_info(body_payload: dict):
     sql_order = '''
         SELECT product_id,
             SUM(reserved_volume)
@@ -93,7 +93,7 @@ def get_product_reserved_stock_info(product_id: int):
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql_order, (product_id,))
+        cursor.execute(sql_order, body_payload)
         order_line = cursor.fetchone()
 
         reserved_info = {
@@ -333,17 +333,17 @@ def add_new_product(new_product_dict: dict, update_shelf_dict: dict) -> bool:
         cursor.execute(sql_product, new_product_dict)
 
         connection.commit()
-        print(f"\n[BANCO DE DADOS] PRODUTO {product_name} ADICIONADO AO CATÁLOGO COM SUCESSO!\n")
+        print(f"\n[BANCO DE DADOS] PRODUTO {new_product_dict["product_name"]} ADICIONADO AO CATÁLOGO COM SUCESSO!\n")
         return True
     
     except sqlite3.IntegrityError:
         connection.rollback()
-        print(f"\n[BANCO DE DADOS] PESO {product_weight} OU DISPONIBILIDADE INFORMADA INCORRETAMENTE.\n\n")
+        print(f"\n[BANCO DE DADOS] PESO {new_product_dict["product_weight"]} OU DISPONIBILIDADE INFORMADA INCORRETAMENTE.\n\n")
         return False
     
     except sqlite3.Error as error:
         connection.rollback()
-        print(f"\n[BANCO DE DADOS] PROBLEMA AO EFETUAR CADASTRO DE {product_name}: {error}")
+        print(f"\n[BANCO DE DADOS] PROBLEMA AO EFETUAR CADASTRO DE {new_product_dict["product_name"]}: {error}")
         return False
     
     finally:
@@ -351,7 +351,7 @@ def add_new_product(new_product_dict: dict, update_shelf_dict: dict) -> bool:
             cursor.close()
         connection.close()
 
-def change_product_info(update_product_dict: dict, update_shelf_dict: dict = None) -> bool:
+def change_product_info(update_product_dict: dict, update_shelf_dict: dict | None = None) -> bool:
     '''
     INSERIR LÓGICA QUE ALTERA INFORMAÇÕES DO PRODUTO COM BASE NO PRODUTO SELECIONADO
     PELO USUÁRIO, A PARTIR DO ID DO PRODUTO, OBTIDO NA BUSCA POR NOME OU POR LISTA
@@ -473,7 +473,7 @@ def cancel_order(order_number: int) -> bool:
         connection.close()
 
 
-def restore_order(order_number: int) -> list:
+def restore_order(body_payload: dict) -> dict | None:
     '''
     AFTER GATEWAY CONFIRM THE PAYMENT, IT WILL RETURN THIS CONFIRMATION WITH THE RELATED ORDER NUMBER, MODELS WILL REQUEST FOR THE ORDER RESTAURATION TO PROCEED WITH THE SOTCK REDUCE AND WITHDRAWAL ON CABINETS
     '''
@@ -484,7 +484,7 @@ def restore_order(order_number: int) -> list:
         created_time,
         expires_time
         FROM orders
-        WHERE order_number = ?;
+        WHERE order_number = :order_number;
     '''
 
     start_database()
@@ -494,7 +494,7 @@ def restore_order(order_number: int) -> list:
     products_id_list = []
     try:
         cursor = connection.cursor()
-        cursor.execute(sql_restore, (order_number,))
+        cursor.execute(sql_restore, body_payload)
         lines = cursor.fetchall()
 
         for line in lines:
@@ -505,9 +505,8 @@ def restore_order(order_number: int) -> list:
                 }
             )
         order_restored = {
-            "order_number": order_number,
             "total_order_price": lines[0][0],
-            "product_id_list": products_id_list,
+            "items": products_id_list,
             "created_time": lines[0][3],
             "expires_time": lines[0][4]
         }
@@ -516,7 +515,7 @@ def restore_order(order_number: int) -> list:
     
     except sqlite3.Error as error:
         print(f"\n[BANCO DE DADOS] ERRO AO RECUPERAR ORDEM DE COMPRAS: [{error}]\n")
-        return []
+        return None
     finally:
         if cursor:
             cursor.close()
@@ -570,7 +569,7 @@ def reserve_order(order: list) -> bool:
 
 
 
-def conclude_checkout_order(cart: list, new_shelfs_values: list, order_number: int) -> bool:
+def conclude_checkout_order(order_list: list[dict], new_shelfs_values: list[dict]) -> bool:
     '''order ALWAYS MUST TO BE RECEIVED AS A LIST OF DICT WITH ID AND VOLUME TO BE BOUGHT
     [
         {
@@ -599,12 +598,12 @@ def conclude_checkout_order(cart: list, new_shelfs_values: list, order_number: i
         UPDATE shelfs
         SET current_weight_grams = :new_shelf_weight,
             current_volume = :new_shelf_volume
-        WHERE id = :cabinet_shelf_id
+        WHERE id = :shelf_id
     '''
-    sql_conclude = '''
+    sql_order = '''
         UPDATE orders
         SET reserve_status = "CONCLUIDA"
-        WHERE order_number = ?
+        WHERE order_number = :order_number
     '''
 
     start_database()
@@ -616,14 +615,14 @@ def conclude_checkout_order(cart: list, new_shelfs_values: list, order_number: i
 
         cursor.executemany(sql_shelfs, new_shelfs_values)
 
-        cursor.execute(sql_conclude, (order_number,))
+        cursor.execute(sql_order, (order_list[0],))
 
-        for prod in cart:
-            cursor.execute(sql_products, prod)
+        for product in order_list:
+            cursor.execute(sql_products, product)
 
             if cursor.rowcount == 0:
                 connection.rollback()
-                print(f"\n[BANCO DE DADOS - CHEKOUT] UM OU MAIS ITENS SEM ESTOQUE SUFICIENTE. VENDA CANCELADA. [{prod['id']}]\n")
+                print(f"\n[BANCO DE DADOS - CHEKOUT] UM OU MAIS ITENS SEM ESTOQUE SUFICIENTE. VENDA CANCELADA. [{product['product_id']}]\n")
                 return False
 
         connection.commit()

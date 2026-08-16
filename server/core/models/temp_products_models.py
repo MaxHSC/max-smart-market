@@ -57,14 +57,16 @@ class OrderProduct:
         self.requested_volume = product["requested_volume"]
 
 class PurchaseOrder:
-    def __init__(self,header: dict, products: list[dict]): #VERIFICAR A NECESSIDADE DE INSERIR O OBJETO DA CONEXAO
-        self.order_number = None
+    def __init__(self,header: dict, products: dict): #VERIFICAR A NECESSIDADE DE INSERIR O OBJETO DA CONEXAO
+        self.order_number: int | None = None
         self.user_id = header["user_id"]
-        self.total_order_price = None
+        self.total_order_price: float | None = None
         self.product_id_list = products["items"]
         self.product_total_price = []
         self.product_unit_price = []
-        self.created_time = None
-        self.expires_time = None
+        self.weight_to_reduce = []
+        self.volume_to_reduce = []
+        self.created_time: str | None =None
+        self.expires_time: str | None = None
         self.reserve_status = "PENDENTE"
         self.payment_status = "PENDENTE"
