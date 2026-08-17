@@ -403,11 +403,11 @@ def change_product_info(update_product_dict: dict, update_shelf_dict: dict | Non
         connection.close()
 
 
-def expires_order(order_number: int) -> bool:
-    sql_cancel = '''
+def expires_order(body_payload: dict) -> bool:
+    sql_expires = '''
         UPDATE orders
         SET reserve_status = "EXPIRADA"
-        WHERE order_number = ?
+        WHERE order_number = :order_number
     '''
 
     start_database()
@@ -416,7 +416,7 @@ def expires_order(order_number: int) -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql_cancel, (order_number,))
+        cursor.execute(sql_expires, body_payload)
 
         connection.commit()
         print(f"\n[BANCO DE DADOS] PRAZO DE ORDEM DE COMPRA EXPIRADO.\n")
@@ -438,11 +438,11 @@ def expires_order(order_number: int) -> bool:
         connection.close()
 
 
-def cancel_order(order_number: int) -> bool:
+def cancel_order(body_payload: dict) -> bool:
     sql_cancel = '''
         UPDATE orders
         SET reserve_status = "CANCELADA"
-        WHERE order_number = ?
+        WHERE order_number = :order_number
     '''
 
     start_database()
@@ -451,7 +451,7 @@ def cancel_order(order_number: int) -> bool:
 
     try:
         cursor = connection.cursor()
-        cursor.execute(sql_cancel, (order_number,))
+        cursor.execute(sql_cancel, body_payload)
 
         connection.commit()
         print(f"\n[BANCO DE DADOS] ORDEM DE COMPRA CANCELADA.\n")

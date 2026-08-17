@@ -2,6 +2,7 @@ from server.database import inventory_dao as inv_dao, hardware_dao as hard_dao
 from server.core.models import temp_products_models as prod_mod
 from server.core.models import temp_hardware_models as hard_mod
 from server.core.validators import shopping_validators as serv_val
+from server.core.calculations import calculations as calcs
 
 from datetime import datetime, timedelta
 
@@ -9,9 +10,8 @@ class ShoppingServices:
     def __init__(self):
         self.action_mapping = {
             "ORDER_CREATE": self.reserve_order,
-            # "ORDER_CANCEL": cancel_order_validation,
-            # "ORDER_RESTORE": restore_order_validation,
-            # "ORDER_CONCLUDE": conclude_order_validation,
+            "ORDER_RESTORE": self.restore_order,
+            "ORDER_CANCEL": self.cancel_order,
         }
 
 #region GENERAL UTILS
@@ -72,7 +72,7 @@ class ShoppingServices:
         return object_dict
 #endregion
 
-
+#region RESERVE ORDER
     def reserve_order(self,header:dict,body_payload:dict):
         item_list: list[dict] = body_payload["items"]
         real_stock_products_object_list = []
@@ -81,6 +81,7 @@ class ShoppingServices:
         shelfs_object_list = []
         shelf_mapping = {}
 
+#region INSTANTIATES OBJECT
         for product in item_list: #INSTANCIA PRODUTO EM ESTOQUE E RESERVADO E ADICIONA À LISTA
             real_product_object: prod_mod.RealStockProduct | None = self.get_product_real_stock_object(header,product)
             real_stock_products_object_list.append(real_product_object)
@@ -96,23 +97,13 @@ class ShoppingServices:
         reserved_products_mapping = {reserved_object.id: reserved_object.reserved_volume for reserved_object in reserved_products_object_list} #MAPPPING DE PRODUTOS RESERVADOS
 
         real_stock_products_mapping = {real_object.id: real_object for real_object in real_stock_products_object_list} # MAPPING DE PRODUTOS EM ESTOQUE
+#endregion
 
-        for order_product in order_products_list: #CALCULO DE PRODUTOS DISPONIVEIS
-            real_object: prod_mod.RealStockProduct | None = real_stock_products_mapping.get(order_product.id)
+#region VOLUME AND WEIGHT
+        available_volume = calcs.product_available_volume_calculation(order_products_list,real_stock_products_mapping,reserved_products_mapping)
 
-            reserved_volume = 0
-
-            if real_object is None:
-                return False
-
-            if real_object:
-                reserved_volume = reserved_products_mapping.get(order_product.id, 0)
-            
-            avaliable_volume = real_object.product_volume - reserved_volume
-
-            if avaliable_volume < order_product.requested_volume:
-                return False
-        
+        if not available_volume:
+            return False
 
         for order_product in order_products_list: #CALCULO DE PESOS E VOLUMES EM RELACAO ÀS PRATELEIRAS
             real_object = real_stock_products_mapping.get(order_product.id)
@@ -131,38 +122,23 @@ class ShoppingServices:
             if shelf_object.id not in shelf_mapping:
                 shelf_mapping[shelf_object.id] = shelf_object
             
-            if shelf_object.current_volume - order_product.requested_volume > shelf_object.volume_capacity or shelf_object.current_volume - order_product.requested_volume < 0:
-                return False
-            
-            if shelf_object.current_weight_grams - (real_object.product_weight * order_product.requested_volume) > shelf_object.weight_capacity_grams or shelf_object.current_weight_grams - (real_object.product_weight * order_product.requested_volume) < 0:
+            available_volume_weight_shelf = calcs.shelf_available_volume_weight_calculation(shelf_object,real_object,order_product)
+
+            if not available_volume_weight_shelf:
                 return False
             
             shelf_object.current_volume = shelf_object.current_volume - order_product.requested_volume
             shelf_object.current_weight_grams = shelf_object.current_weight_grams - (real_object.product_weight * order_product.requested_volume)
-    
-        #CALCULO DE PRECOS
-        total_order_price: float = 0
-        product_total_price = []
-        product_unit_price = []
-        for order_product in order_products_list:
-            real_object = real_stock_products_mapping.get(order_product.id)
+#endregion
 
-            if real_object is None:
-                return False
+#region PRICES
+        total_order_price, product_total_price, product_unit_price = calcs.price_calculation(order_products_list,real_stock_products_mapping)
 
-            total_order_price += real_object.price * order_product.requested_volume
-            product_total_price.append(
-                {
-                    real_object.id: real_object.price*order_product.requested_volume
-                }
-            )
-            product_unit_price.append(
-                {
-                    real_object.id: real_object.price
-                }
-            )
+        if total_order_price is None:
+            return False
+#endregion
 
-        #INSTANCIA OBJETO DA ORDEM DE COMPRAS
+#region INSTANTIATES ORDER
         created_order_time = datetime.now() #NÃO É DECLARADO, ASSUME VALOR DEFAULT NO DB
         expires_order_time = created_order_time + timedelta(minutes=10)
         created_order_time_str = created_order_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -177,8 +153,9 @@ class ShoppingServices:
         order_object.product_unit_price = product_unit_price
         order_object.created_time = created_order_time_str
         order_object.expires_time = expires_order_time_str
+#endregion
 
-        #MONTA DICT PARA PERSISTENCIA NO DB
+#region MOUNT DICT
         order_list: list[dict] = []
         for product in order_object.product_id_list:
             order_list.append(
@@ -196,16 +173,18 @@ class ShoppingServices:
 
                 }
             )
+#endregion
 
-        #SALVA NO DB
+#region PERSIST DB VIA DAO
         confirm_order_reservation: bool = inv_dao.reserve_order(order_list)
 
         if not confirm_order_reservation:
             return False
         
         return confirm_order_reservation
+#endregion
 
-
+#region RESTORE ORDER
     def restore_order(self,header:dict,body_payload:dict):
         order_restored: dict | None = inv_dao.restore_order(body_payload)
         real_stock_products_object_list = []
@@ -218,6 +197,7 @@ class ShoppingServices:
         if order_restored is None:
             return False
 
+#region INSTANTIATES OBJECT
         order_object: prod_mod.PurchaseOrder = prod_mod.PurchaseOrder(header,order_restored)
         order_object.order_number = body_payload["order_number"]
         order_object.total_order_price = order_restored["total_order_price"]
@@ -242,7 +222,10 @@ class ShoppingServices:
         reserved_products_mapping = {reserved_object.id: reserved_object.reserved_volume for reserved_object in reserved_products_object_list} #MAPPPING DE PRODUTOS RESERVADOS
 
         real_stock_products_mapping = {real_object.id: real_object for real_object in real_stock_products_object_list} # MAPPING DE PRODUTOS EM ESTOQUE
+#endregion
 
+#region CALC PRODUCT VOL
+        
         for order_product in order_products_list: #CALCULO QUE ATUALIZA VOLUME DOS PRODUTOS
             real_object: prod_mod.RealStockProduct | None = real_stock_products_mapping.get(order_product.id)
 
@@ -309,58 +292,64 @@ class ShoppingServices:
             return False
 
         return result
+#endregion
 
+#region CANCEL ORDER
+    def cancel_order(self, header: dict, body_payload: dict):
+        result = inv_dao.cancel_order(body_payload)
 
-def test_new_order():
-    payload = {
-            "header": { 
-                "correlation_id": "req_8f3a9b1c-2026",
-                "client_type": "totem",
-                "client_id": "TOTEM_LOJA_01",
-                "user_id": "3",
-                "role": "consumer", #consumer, employee, manager
-                "auth_token": "bearer.jwt.token.here",
-                "action": "ORDER_CREATE",
-                "timestamp": "1785816136"
-            },
-            "payload": {
-                "items": [
-                    {
-                        "product_id": 1,        # Arroz Integral 1kg
-                        "requested_volume": 2   # 2 unidades (Volume total: 2.4)
-                    },
-                    {
-                        "product_id": 3,        # Óleo de Soja 900ml
-                        "requested_volume": 3   # 3 unidades (Volume total: 2.7)
-                    },
-                    {
-                        "product_id": 6,        # Macarrão Espaguete
-                        "requested_volume": 5   # 5 unidades (Volume total: 3.0)
-                    },
-                    {
-                        "product_id": 8,        # Leite UHT Integral 1L
-                        "requested_volume": 4   # 4 unidades (Volume total: 4.0)
-                    },
-                    {
-                        "product_id": 10,       # Refrigerante Cola 2L
-                        "requested_volume": 2   # 2 unidades (Volume total: 4.0)
-                    },
-                    {
-                        "product_id": 16,       # Chocolate em Barra
-                        "requested_volume": 6   # 6 unidades (Volume total: 0.6)
-                    }
-                ]
-            }
-    }
+        return result
 
-     # Instanciando a classe correta de serviços de compras
-    shopping_obj = ShoppingServices() 
+# def test_new_order():
+#     payload = {
+#             "header": { 
+#                 "correlation_id": "req_8f3a9b1c-2026",
+#                 "client_type": "totem",
+#                 "client_id": "TOTEM_LOJA_01",
+#                 "user_id": "3",
+#                 "role": "consumer", #consumer, employee, manager
+#                 "auth_token": "bearer.jwt.token.here",
+#                 "action": "ORDER_CREATE",
+#                 "timestamp": "1785816136"
+#             },
+#             "payload": {
+#                 "items": [
+#                     {
+#                         "product_id": 1,        # Arroz Integral 1kg
+#                         "requested_volume": 2   # 2 unidades (Volume total: 2.4)
+#                     },
+#                     {
+#                         "product_id": 3,        # Óleo de Soja 900ml
+#                         "requested_volume": 3   # 3 unidades (Volume total: 2.7)
+#                     },
+#                     {
+#                         "product_id": 6,        # Macarrão Espaguete
+#                         "requested_volume": 5   # 5 unidades (Volume total: 3.0)
+#                     },
+#                     {
+#                         "product_id": 8,        # Leite UHT Integral 1L
+#                         "requested_volume": 4   # 4 unidades (Volume total: 4.0)
+#                     },
+#                     {
+#                         "product_id": 10,       # Refrigerante Cola 2L
+#                         "requested_volume": 2   # 2 unidades (Volume total: 4.0)
+#                     },
+#                     {
+#                         "product_id": 16,       # Chocolate em Barra
+#                         "requested_volume": 6   # 6 unidades (Volume total: 0.6)
+#                     }
+#                 ]
+#             }
+#     }
 
-    # Executa o fluxo enviando o payload para o processamento de compras
-    result = shopping_obj.process_payload(sample_payload)
+#      # Instanciando a classe correta de serviços de compras
+#     shopping_obj = ShoppingServices() 
+
+#     # Executa o fluxo enviando o payload para o processamento de compras
+#     result = shopping_obj.process_payload(sample_payload)
     
-    # Exibe o resultado do teste no terminal de forma clara
-    print(f"\n[TESTE - PEDIDO] Criação da Ordem na ShoppingServices com 6 itens distintos -> Resultado: {result}", flush=True)
+#     # Exibe o resultado do teste no terminal de forma clara
+#     print(f"\n[TESTE - PEDIDO] Criação da Ordem na ShoppingServices com 6 itens distintos -> Resultado: {result}", flush=True)
 
     
 

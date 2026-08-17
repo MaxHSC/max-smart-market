@@ -4,7 +4,7 @@ from server.core.models import temp_products_models as prod_mod
 from server.core.models import token_generator as token_gen
 from server.core.models import temp_hardware_models as hard_mod
 from server.core.validators import shopping_validators as serv_val
-from server.core.calculations import products_calculations as prod_calc
+from server.core.calculations import calculations as calcs
 
 # TODO: [Refatoração Futura - Arquitetura & Padronização]
     # 1. Avaliar evolução para 'Anemic Service': centralizar aqui a orquestração do ecossistema 
@@ -77,35 +77,37 @@ class ProductsServices():
 #endregion
 
 
-#region ACTIONS NEW
+#region NEW PRODUCT
     def new_product(self, header:dict, body_payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
         item: dict = body_payload["item"]
-        new_product_object: prod_mod.NewProduct = prod_mod.NewProduct(item)
 
+        new_product_object: prod_mod.NewProduct = prod_mod.NewProduct(item)
         if new_product_object is None:
             return False
 
         shelf_object: hard_mod.InstalledShelf | None = self.get_shelf_object(header,body_payload=item)
-
         if shelf_object is None:
             return False
+
 #region CALCS
-        if shelf_object.current_volume + new_product_object.product_volume > shelf_object.volume_capacity or shelf_object.current_volume + new_product_object.product_volume <= 0:
+        volume_result = calcs.shelf_volume_calculation(shelf_object, new_product_object)
+        if not volume_result:
             return False
-        
-        if shelf_object.current_weight_grams + (new_product_object.product_weight * new_product_object.product_volume) > shelf_object.weight_capacity_grams or shelf_object.current_weight_grams + (new_product_object.product_weight * new_product_object.product_volume) <= 0:
-            return False
-        
+    
         shelf_object.current_volume = shelf_object.current_volume + new_product_object.product_volume
         
+        weight_result = calcs.shelf_weight_calculation(shelf_object, new_product_object)
+        if not weight_result:
+            return False
+        
         shelf_object.current_weight_grams = shelf_object.current_weight_grams + (new_product_object.product_weight * new_product_object.product_volume)
-#region CALCS
-        new_product_attributes_list = ["product_name", "bar_code", "price", "product_batch", "validity", "product_weight", "shelf_id", "product_volume"]
+#endregion
 
+#region MOUNT DICT
+        new_product_attributes_list = ["product_name", "bar_code", "price", "product_batch", "validity", "product_weight", "shelf_id", "product_volume"]
         shelf_attributes_list = ["current_weight_grams", "current_volume", "id"]
 
         new_product_dict: dict = self.attributes_to_dict(new_product_object,new_product_attributes_list)
-
         update_shelf_dict: dict = self.attributes_to_dict(shelf_object, shelf_attributes_list)
 
         result = inv_dao.add_new_product(new_product_dict, update_shelf_dict)
@@ -113,7 +115,7 @@ class ProductsServices():
         return result
 #enderion
 
-#region ACTIONS CHANGE
+#region CHANGE PRODUCT
     def change_product_info(self,header: dict, body_payload: dict) -> bool: #MÉTODO QUE RECEBE EXTERNO E ENVIA INTERNO
         item: dict = body_payload["item"]
         update_shelf_dict: dict = {}
@@ -127,25 +129,21 @@ class ProductsServices():
 
         if shelf_object is None:
             return False
-#region CALCS        
+#region CALCS
         if item["column_to_change"] == "product_volume":
-            shelf_delta_volume = shelf_object.current_volume - real_stock_product_object.product_volume
-            shelf_delta_weight = shelf_object.current_weight_grams - (real_stock_product_object.product_weight * real_stock_product_object.product_volume)
+            shelf_new_volume = calcs.new_shelf_volume(shelf_object,real_stock_product_object,item)
+            shelf_new_weight = calcs.new_shelf_weight(shelf_object,real_stock_product_object,item)
 
-            shelf_new_volume = shelf_delta_volume + item["new_value"]
-            if shelf_new_volume > shelf_object.volume_capacity:
+            if not shelf_new_volume or not shelf_new_weight:
                 return False
-            
-            shelf_new_weight = shelf_delta_weight + (real_stock_product_object.product_weight * item["new_value"])
-            if shelf_new_weight > shelf_object.weight_capacity_grams:
-                return False
-#region CALCS            
+      
             shelf_object.current_volume = shelf_new_volume
             shelf_object.current_weight_grams = shelf_new_weight
 
             shelf_attributes_list = ["current_weight_grams", "current_volume", "id"]
             update_shelf_dict: dict = self.attributes_to_dict(shelf_object, shelf_attributes_list)
-        
+#endregion
+#region MOUNT DICT
         setattr(real_stock_product_object, item["column_to_change"], item["new_value"])
 
         product_attributes_list = ["product_id", "product_name", "price", "product_volume", "available"]
