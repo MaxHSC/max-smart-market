@@ -207,13 +207,12 @@ def list_all_products() -> tuple: #RETURN LIST WITH ALL PRODUCTS IN STOCK AND TH
         product_weight,
         cabinet_shelf_id,
         product_volume,
-        reserved_volume_amount,
         avaliable
         FROM products
     '''
     sql_reserved = '''
         SELECT product_id,
-        SUM(amount_reserved)
+        SUM(reserved_volume)
         FROM orders
         WHERE reserve_status = "PENDENTE"
         GROUP BY product_id
@@ -223,8 +222,8 @@ def list_all_products() -> tuple: #RETURN LIST WITH ALL PRODUCTS IN STOCK AND TH
     connection = connect_database()
     cursor = None
 
-    products_stock = []
-    products_reserved = {}
+    products_stock = {}
+    products_reserved = []
 
     try:
         cursor = connection.cursor()
@@ -232,8 +231,7 @@ def list_all_products() -> tuple: #RETURN LIST WITH ALL PRODUCTS IN STOCK AND TH
         lines = cursor.fetchall()
 
         for line in lines:
-            products_stock.append(
-                {
+            products_stock[line[0]] = {
                     "id":line[0],
                     "bar_code":line[1],
                     "product_name":line[2],
@@ -243,16 +241,19 @@ def list_all_products() -> tuple: #RETURN LIST WITH ALL PRODUCTS IN STOCK AND TH
                     "product_weight":line[6],
                     "cabinet_shelf_id":line[7],
                     "product_volume":line[8],
-                    "reserved_volume_amount":line[9],
-                    "avaliable":line[10],
+                    "avaliable":line[9],
                 }
-            )
 
         cursor.execute(sql_reserved)
         lines = cursor.fetchall()
 
         for line in lines:
-            products_reserved[line[0]] = line[1]
+            products_reserved.append(
+                {
+                    "product_id": line[0],
+                    "reserved_volume": line[1],
+                }
+            )
         
         return products_stock, products_reserved
     

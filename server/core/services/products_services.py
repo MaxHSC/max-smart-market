@@ -19,13 +19,6 @@ class ProductsServices():
         self.action_mapping ={
             "NEW_PRODUCT": self.new_product,
             "CHANGE_PRODUCT_INFO": self.change_product_info,
-            # "ORDER_CREATE": reserve_order_validation,
-            # "ORDER_CANCEL": cancel_order_validation,
-            # "ORDER_RESTORE": restore_order_validation,
-            # "SUSPEND_PRODUCT": suspend_product_validation,
-            # "UNSUSPEND_PRODUCT": unsuspend_product_validation,
-            # "GET_PRODUCTS_LIST": get_products_list_validation,
-            # "GET_PRODUCT_INFO": get_product_info_validation,
         }
 
 #region GENERAL UTILS

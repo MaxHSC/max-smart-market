@@ -12,6 +12,7 @@ class ShoppingServices:
             "ORDER_CREATE": self.reserve_order,
             "ORDER_RESTORE": self.restore_order,
             "ORDER_CANCEL": self.cancel_order,
+            "GET_PRODUCTS_LIST": self.get_products_list,
         }
 
 #region GENERAL UTILS
@@ -299,6 +300,20 @@ class ShoppingServices:
         result = inv_dao.cancel_order(body_payload)
 
         return result
+    
+#region PRODUCT LIST
+    def get_products_list(header: dict, body_payload: dict) -> list[dict]:
+        products_stock, products_reserved = inv_dao.list_all_products()
+
+        for product in products_reserved:
+            product_id = product["product_id"]
+
+            if product_id in products_stock:
+                products_stock[product_id]["product_volume"] -= product["reserved_volume"]
+        
+        products_list = list(products_stock.values())
+
+        return products_list
 
 # def test_new_order():
 #     payload = {
